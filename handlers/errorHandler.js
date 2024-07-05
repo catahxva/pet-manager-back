@@ -1,6 +1,8 @@
 import { GenericError } from "../utils/CustomErrors.js";
 
 const errorHandler = function (error, _req, res) {
+  console.log(error);
+
   const customErr = error.isCustomError;
   const statusCode = customErr ? error.statusCode : 400;
   const errorObj = customErr

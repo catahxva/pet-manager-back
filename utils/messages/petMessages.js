@@ -4,6 +4,8 @@ export const petSuccessMessages = {
 
 export const petErrorMessages = {
   max_pets: "You have reached the maximum number of pets.",
+  pet_not_found: "Pet could not be found.",
+  no_id: "The ID is not valid. Please try again later.",
 };
 
 export const petValidationErrorMessages = {

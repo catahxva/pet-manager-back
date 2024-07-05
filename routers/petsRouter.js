@@ -13,6 +13,16 @@ const petsRouter = function (fastify, _options, done) {
     { preHandler: authMiddleware.protectRoute },
     petsController.createPet
   );
+  fastify.patch(
+    "/update/:id",
+    { preHandler: authMiddleware.protectRoute },
+    petsController.updatePet
+  );
+  fastify.patch(
+    "/remove/:id",
+    { preHandler: authMiddleware.protectRoute },
+    petsController.removePet
+  );
 
   // done function
   done();

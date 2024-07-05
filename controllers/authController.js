@@ -22,6 +22,15 @@ import {
 import { getOneByCriteria } from "../utils/dbMethods.js";
 import { ComplexError, GenericError } from "../utils/CustomErrors.js";
 
+// CONTROLLER FOR:
+//              - SIGNUP
+//              - RESENDING VERIFICATION LINK
+//              - VERIFYING ACCOUNT
+//              - LOGGING IN
+//              - LOGGING OUT
+//              - FORGOT PASS FN
+//              - RESET PASS
+
 // function roles:
 //  - extract necessary data from request body
 //  - validate data based on criteria

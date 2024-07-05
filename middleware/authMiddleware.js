@@ -7,12 +7,16 @@ import { getOneByCriteria, getOneById } from "../utils/dbMethods.js";
 import { GenericError } from "../utils/CustomErrors.js";
 import { authErrorMessages } from "../utils/messages/authMessages.js";
 
+// MIDDLEWARE FOR:
+//              - PROTECTING ROUTES FROM UNAUTH USERS
+
 // function roles:
 //  - check if token exists
 //  - check if token is blacklisted
 //  - check if token has expired
 //  - check if user exists
 //  - check if user has changed pass since token was emitted
+//  - check if user is verified
 
 // throws err if:
 //  - token doesnt exist
@@ -20,6 +24,7 @@ import { authErrorMessages } from "../utils/messages/authMessages.js";
 //  - token is expired
 //  - user does not exist
 //  - user changed pass
+//  - user not verified
 //  - unexpected errs
 
 const protectRoute = async function (req, res) {
@@ -43,6 +48,8 @@ const protectRoute = async function (req, res) {
   // decode token and extract daa
   const { id, iat, exp } = await decodeJWTToken(token);
 
+  console.log(id);
+
   console.log(iat, exp);
 
   // check if token is expired
@@ -53,7 +60,7 @@ const protectRoute = async function (req, res) {
     throw new GenericError({ message: authErrorMessages.token_expired });
 
   // get user based on id decoded from token
-  const { doc: user, docData: userData } = getOneById(
+  const { doc: user, docData: userData } = await getOneById(
     db,
     process.env.DB_COLLECTION_USERS,
     id
@@ -63,12 +70,20 @@ const protectRoute = async function (req, res) {
   if (!user)
     throw new GenericError({ message: authErrorMessages.user_not_found });
 
-  // get the time when the user changed their pass (if they did)
-  const { changedPasswordAt } = userData;
+  // get the time when the user changed their pass (if they did) and
+  // their verified status
+  const { changedPasswordAt, verified } = userData;
+
+  // convert iat to millis
+  const iatInMs = iat * 1000;
 
   // check if they changed pass after token was emitted
-  if (changedPasswordAt && changedPasswordAt > iat)
+  if (changedPasswordAt && changedPasswordAt > iatInMs)
     throw new GenericError({ message: authErrorMessages.pass_changed });
+
+  // check if user is verified
+  if (!verified)
+    throw new GenericError({ message: authErrorMessages.user_not_verified });
 
   req.user = { id: user.id, ...userData };
 };

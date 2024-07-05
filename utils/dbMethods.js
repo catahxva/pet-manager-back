@@ -27,6 +27,35 @@ export const getOneByCriteria = async function (db, collection, criterias) {
   return { empty, doc, docData, docRef };
 };
 
+export const getMultipleByCriteria = async function (
+  db,
+  collection,
+  criterias
+) {
+  // criterias = [{criteriaField, criteriaOperator, criteriaValue}]
+
+  // get collection reference
+  const collectionRef = db.collection(collection);
+
+  // build the query
+  const collectionQuery = criterias.reduce(
+    (acc, { criteriaField, criteriaOperator, criteriaValue }) =>
+      acc.where(criteriaField, criteriaOperator, criteriaValue),
+    collectionRef
+  );
+
+  // execute the query and extract data
+  const { empty, docs } = await collectionQuery.get();
+
+  // guard clause if query is empty
+  if (empty) return { empty, docs: null, docsData: null, docsRef: null };
+
+  // extract the doc, docData and doc reference
+
+  // return all needed data
+  return { empty, doc, docData, docRef };
+};
+
 export const getOneById = async function (db, collection, id) {
   const collectionRef = db.collection(collection);
   const docRef = collectionRef.doc(id);

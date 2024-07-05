@@ -2,10 +2,6 @@
 import fastifyApp from "./app.js";
 import dotenv from "dotenv";
 
-import crypto from "crypto";
-
-console.log(crypto.randomBytes(128).toString("hex"));
-
 // read config file
 dotenv.config({ path: "./config.env" });
 
