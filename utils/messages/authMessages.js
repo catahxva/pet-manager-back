@@ -17,8 +17,12 @@ export const authErrorMessages = {
   user_not_verified:
     "Your account is not verified so you cannot perform this action.",
   token_not_received: "No token could be found, please try again later.",
+  token_blacklisted: "Token is no longer available.",
+  token_expired: "Token is expired.",
   pass_dont_match: "Passwords do not match. Please try another password",
   generic_error: "Something went wrong. Please try again later.",
+  pass_changed:
+    "You have changed your password. Please login again to gain access.",
 };
 
 export const authValidationErrorMessages = {

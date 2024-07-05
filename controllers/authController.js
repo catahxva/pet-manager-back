@@ -489,10 +489,15 @@ const resetPass = async function (req, res) {
     throw new GenericError({ message: authErrorMessages.user_not_verified });
 
   // update pass
+
+  // hash pass
   const saltRounds = 12;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  await userRef.update({ password: hashedPassword });
+  // register the current time
+  const changedPasswordAt = Date.now();
+
+  await userRef.update({ password: hashedPassword, changedPasswordAt });
 
   // send response
   res.code(200).send({
