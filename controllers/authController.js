@@ -175,14 +175,14 @@ const resendVerification = async function (req, res) {
   const fieldToQueryBy = username ? "username" : "email";
 
   const {
-    empty,
+    empty: noUser,
     docData: userData,
     docRef: userRef,
   } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
     new Criteria(fieldToQueryBy, "==", receivedCredential),
   ]);
 
-  if (empty)
+  if (noUser)
     throw new GenericError({ message: authErrorMessages.user_not_found });
 
   if (userData.verified)
@@ -237,14 +237,14 @@ const verifyAccount = async function (req, res) {
 
   // query for user based on token
   const {
-    empty,
+    empty: noUser,
     doc: userDoc,
     docRef: userRef,
   } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
     new Criteria("verifyEmailToken", "==", token),
   ]);
 
-  if (empty)
+  if (noUser)
     throw new GenericError({ message: authErrorMessages.user_not_found });
 
   // update verification status and remove current token
@@ -307,7 +307,7 @@ const login = async function (req, res) {
   const fieldToQueryBy = username ? "username" : "email";
 
   const {
-    empty,
+    empty: noUser,
     doc: userDoc,
     docData: userData,
   } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
@@ -318,7 +318,7 @@ const login = async function (req, res) {
   const passwordsMatch = await bcrypt.compare(password, userData.password);
 
   // check if user was not found
-  if (empty)
+  if (noUser)
     throw new GenericError({ message: authErrorMessages.user_not_found });
 
   // check verified status
@@ -408,14 +408,14 @@ const forgotPass = async function (req, res) {
   const fieldToQueryBy = username ? "username" : "email";
 
   const {
-    empty,
+    empty: noUser,
     docData: userData,
     docRef: userRef,
   } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
     new Criteria(fieldToQueryBy, "==", receivedCredential),
   ]);
 
-  if (empty)
+  if (noUser)
     throw new GenericError({ message: authErrorMessages.user_not_found });
 
   if (!userData.verified)
@@ -484,14 +484,14 @@ const resetPass = async function (req, res) {
 
   //query user
   const {
-    empty,
+    empty: noUser,
     docData: userData,
     docRef: userRef,
   } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
     new Criteria("changePasswordToken", "==", token),
   ]);
 
-  if (empty)
+  if (noUser)
     throw new GenericError({ message: authErrorMessages.user_not_found });
 
   if (!userData.verified)

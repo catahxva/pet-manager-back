@@ -48,12 +48,19 @@ export const getMultipleByCriteria = async function (
   const { empty, docs } = await collectionQuery.get();
 
   // guard clause if query is empty
-  if (empty) return { empty, docs: null, docsData: null, docsRef: null };
+  if (empty) return { empty, docs: null, docsData: null, docsRefs: null };
 
-  // extract the doc, docData and doc reference
+  // extract docs data and docs refs
+  const docsData = [];
+  const docsRefs = [];
+
+  docs.forEach((doc) => {
+    docsData.push({ id: doc.id, ...doc.data() });
+    docsRefs.push(doc.ref);
+  });
 
   // return all needed data
-  return { empty, doc, docData, docRef };
+  return { empty, docs, docsData, docsRefs };
 };
 
 export const getOneById = async function (db, collection, id) {
