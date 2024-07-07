@@ -1,11 +1,11 @@
-import db from "../db";
-import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj";
-import validateData from "../utils/validateData";
-import FieldToValidate from "../utils/FieldToValidate";
-import isEmptyObject from "../utils/isEmptyObject";
-import mealAllowedFields from "../utils/allowedFields/mealAllowedFields";
-import { GenericError, ComplexError } from "../utils/CustomErrors";
-import { getOneById } from "../utils/dbMethods";
+import db from "../db.js";
+import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
+import validateData from "../utils/validateData.js";
+import FieldToValidate from "../utils/FieldToValidate.js";
+import isEmptyObject from "../utils/isEmptyObject.js";
+import mealAllowedFields from "../utils/allowedFields/mealAllowedFields.js";
+import { GenericError, ComplexError } from "../utils/CustomErrors.js";
+import { mealValidationErrorMessages } from "../utils/messages/mealMessages.js";
 
 // CONTROLLER FOR:
 //              - CREATING MEAL
@@ -27,53 +27,33 @@ import { getOneById } from "../utils/dbMethods";
 
 // function roles:
 //  - extract data
+//  - check if day corresponds to pet
 //  - validate data
-//  - check if pet exists
-//  - check if day exists
 //  - create meal
 //  - update the day goal progress
 //  - send response
 
 // throws err if:
-//  -
+//  - day and pet dont correspond
+//  - invalid user input
+//  - unexpected error
 
 const createMeal = async function (req, res) {
   // extract data
   const {
     body,
     user: { id: userId },
+    pet: { id: petId },
+    day: { monitoringDietBy, dietGoalProgress, petId: petIdOfDay },
+    dayRef,
   } = req;
-  const { description, foods, dayId, petId } = body;
+  const { description, foods } = body;
 
   // foods = [{quantity, baseCalories, foodId}]
 
-  // validate data
-  if (!petId || !dayId)
-    throw new GenericError({
-      message: "Meal must be associated with a day and pet",
-    });
-
-  // check if day && pet exist
-  const [
-    {
-      doc: day,
-      docData: { monitoringDietBy, dietGoalProgress },
-      docRef: dayRef,
-    },
-    { doc: pet },
-  ] = await Promise.all([
-    getOneById(db, process.env.DB_COLLECTION_DAYS, dayId),
-    getOneById(db, process.env.DB_COLLECTION_DAYS),
-  ]);
-
-  if (!pet) throw new GenericError({ message: "Pet does not exist" });
-
-  if (!day) throw new GenericError({ message: "Day does not exist" });
-
-  // get monitoringOption
-  const monitoringByMeals =
-    monitoringDietBy === process.env.PET_FIELD_DIET_BY_MEALS;
-  const monitoringByCalories = process.env.PET_FIELD_DIET_BY_CALORIES;
+  // check if pet and day match
+  if (petId !== petIdOfDay)
+    throw new GenericError({ message: "Day and pet dont match" });
 
   // validation error
   const validationErrors = validateData(
@@ -82,7 +62,7 @@ const createMeal = async function (req, res) {
       new FieldToValidate(monitoringByMeals && foods, "foods_not_allowed"),
       new FieldToValidate(
         monitoringByCalories &&
-          (!foods || !Array.isArray(foods) || foods.length === 0),
+          (!foods || !Array.isArray(foods) || foods.length <= 0),
         "foods_required"
       ),
     ],
@@ -94,6 +74,12 @@ const createMeal = async function (req, res) {
       errorType: process.env.ERROR_TYPE_VALIDATION,
       errorsObject: validationErrors,
     });
+
+  // get monitoringOption
+  const monitoringByMeals =
+    monitoringDietBy === process.env.PET_FIELD_DIET_BY_MEALS;
+  const monitoringByCalories =
+    monitoringDietBy === process.env.PET_FIELD_DIET_BY_CALORIES;
 
   // create meal && update day
   await db.runTransaction(async (transaction) => {
@@ -123,13 +109,43 @@ const createMeal = async function (req, res) {
     transaction.update(dayRef, { dietGoalProgress: newDietGoalProgress });
   });
 
+  // send response
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: "Meal added successfully!",
   });
 };
 
-const updateMeal = async function (req, res) {};
+// function roles:
+//  - extract data
+//  - validate data
+//  - update the meal data
+//  - if the monitoring type is calories, also update the
+//    corresponding day
+//  - send back response
+
+// throws err if:
+//  -
+const updateMeal = async function (req, res) {
+  // extract data
+  const {
+    body,
+    pet: { id: petId },
+    day: { monitoringDietBy, dietGoalProgress, petId: petIdOfDay },
+    dayRef,
+  } = req;
+
+  // validate data
+
+  // start transaction
+  // update meal
+  // update corresponding day if needed
+  // send res
+  res.code(200).send({
+    status: process.env.RES_STATUS_SUCCESS,
+    message: "Meal updated successfully!",
+  });
+};
 
 const removeMeal = async function (req, res) {};
 

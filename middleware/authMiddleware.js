@@ -48,10 +48,6 @@ const protectRoute = async function (req, res) {
   // decode token and extract daa
   const { id, iat, exp } = await decodeJWTToken(token);
 
-  console.log(id);
-
-  console.log(iat, exp);
-
   // check if token is expired
   const currentTime = Date.now();
   const expirationTimeInMs = exp * 1000;

@@ -8,6 +8,7 @@ import {
   monthAllowedFields,
   yearAllowedFields,
 } from "../utils/allowedFields/dayAllowedFields.js";
+import { dayErrorMessages } from "../utils/messages/dayMessages.js";
 
 // CONTROLLER FOR:
 //              - CREATING A NEW DAY
@@ -51,21 +52,13 @@ const createDay = async function (req, res) {
   const {
     body,
     user: { id: userId },
+    pet: { id: petId, monitoringDietBy, dietGoal },
   } = req;
-  const { petId, day, month, year } = body;
+  const { day, month, year } = body;
 
   // validate data
-  if (!petId || !day || !month || !year)
-    throw new GenericError({ message: "Could not create a new day." });
-
-  // check pet && extract data
-  const {
-    doc: pet,
-    docData: { monitoringDietBy, dietGoal },
-  } = await getOneById(db, process.env.DB_COLLECTION_PETS, petId);
-
-  if (!pet)
-    throw new GenericError({ message: "No pet available", statusCode: 404 });
+  if (!day || !month || !year)
+    throw new GenericError({ message: dayErrorMessages.no_required_data });
 
   // common criteria for queries
   const commonCriteria = [
@@ -89,7 +82,7 @@ const createDay = async function (req, res) {
     ]);
 
   // if day exists, throw err
-  if (!noDay) throw new GenericError({ message: "This day already exists" });
+  if (!noDay) throw new GenericError({ message: dayErrorMessages.day_exists });
 
   // start transaction to create day && month && year (m && y conditionally)
   await db.runTransaction(async (transaction) => {

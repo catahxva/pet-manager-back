@@ -1,8 +1,9 @@
 const keepAllowedFieldsOnObj = function (obj, allowedFields) {
+  const originalObjKeys = Object.keys(obj);
   const clearedObj = {};
 
-  allowedFields.forEach((field) => {
-    if (obj[field]) clearedObj[field] = obj[field];
+  originalObjKeys.forEach((key) => {
+    if (allowedFields.includes(key)) clearedObj[key] = obj[key];
   });
 
   return clearedObj;
