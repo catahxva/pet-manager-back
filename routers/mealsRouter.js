@@ -2,6 +2,7 @@ import mealsController from "../controllers/mealsController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import petsMiddleware from "../middleware/petsMiddleware.js";
 import daysMiddleware from "../middleware/daysMiddleware.js";
+import mealsMiddleware from "../middleware/mealsMiddleware.js";
 
 const mealsRouter = function (fastify, _options, done) {
   fastify.decorate("user", "");
@@ -16,6 +17,7 @@ const mealsRouter = function (fastify, _options, done) {
         authMiddleware.protectRoute,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
+        mealsMiddleware.documentsCorrespond,
       ],
     },
     mealsController.createMeal
@@ -27,6 +29,7 @@ const mealsRouter = function (fastify, _options, done) {
         authMiddleware.protectRoute,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
+        mealsMiddleware.documentsCorrespond,
       ],
     },
     mealsController.updateMeal

@@ -27,7 +27,6 @@ import { mealValidationErrorMessages } from "../utils/messages/mealMessages.js";
 
 // function roles:
 //  - extract data
-//  - check if day corresponds to pet
 //  - validate data
 //  - create meal
 //  - update the day goal progress
@@ -43,17 +42,12 @@ const createMeal = async function (req, res) {
   const {
     body,
     user: { id: userId },
-    pet: { id: petId },
-    day: { monitoringDietBy, dietGoalProgress, petId: petIdOfDay },
+    day: { monitoringDietBy, dietGoalProgress },
     dayRef,
   } = req;
   const { description, foods } = body;
 
   // foods = [{quantity, baseCalories, foodId}]
-
-  // check if pet and day match
-  if (petId !== petIdOfDay)
-    throw new GenericError({ message: "Day and pet dont match" });
 
   // validation error
   const validationErrors = validateData(
@@ -130,8 +124,7 @@ const updateMeal = async function (req, res) {
   // extract data
   const {
     body,
-    pet: { id: petId },
-    day: { monitoringDietBy, dietGoalProgress, petId: petIdOfDay },
+    day: { monitoringDietBy, dietGoalProgress },
     dayRef,
   } = req;
 
