@@ -6,6 +6,7 @@ import isEmptyObject from "../utils/isEmptyObject.js";
 import mealAllowedFields from "../utils/allowedFields/mealAllowedFields.js";
 import { GenericError, ComplexError } from "../utils/CustomErrors.js";
 import { mealValidationErrorMessages } from "../utils/messages/mealMessages.js";
+import { getOneById } from "../utils/dbMethods.js";
 
 // CONTROLLER FOR:
 //              - CREATING MEAL
@@ -27,14 +28,12 @@ import { mealValidationErrorMessages } from "../utils/messages/mealMessages.js";
 
 // function roles:
 //  - extract data
-//  - validate data
+//  - calculate total calories
 //  - create meal
 //  - update the day goal progress
 //  - send response
 
 // throws err if:
-//  - day and pet dont correspond
-//  - invalid user input
 //  - unexpected error
 
 const createMeal = async function (req, res) {
@@ -42,49 +41,32 @@ const createMeal = async function (req, res) {
   const {
     body,
     user: { id: userId },
-    day: { monitoringDietBy, dietGoalProgress },
+    day: { dietGoalProgress },
     dayRef,
+    monitoringByMeals,
+    monitoringByCalories,
   } = req;
-  const { description, foods } = body;
+  const { foods } = body;
 
   // foods = [{quantity, baseCalories, foodId}]
 
-  // validation error
-  const validationErrors = validateData(
-    [
-      new FieldToValidate(monitoringByMeals && !description, "description"),
-      new FieldToValidate(monitoringByMeals && foods, "foods_not_allowed"),
-      new FieldToValidate(
-        monitoringByCalories &&
-          (!foods || !Array.isArray(foods) || foods.length <= 0),
-        "foods_required"
-      ),
-    ],
-    mealValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
-
-  // get monitoringOption
-  const monitoringByMeals =
-    monitoringDietBy === process.env.PET_FIELD_DIET_BY_MEALS;
-  const monitoringByCalories =
-    monitoringDietBy === process.env.PET_FIELD_DIET_BY_CALORIES;
+  // calculate calories
+  const caloriesTotal = monitoringByCalories
+    ? foods.reduce((acc, f) => acc + (f.quantity / 100) * f.baseCalories, 0)
+    : null;
 
   // create meal && update day
   await db.runTransaction(async (transaction) => {
     // create meal
     const collectionRef = db.collection(process.env.DB_COLLECTION_MEALS);
-
     const newMealRef = collectionRef.doc();
 
     transaction.set(
       newMealRef,
-      keepAllowedFieldsOnObj({ userId, ...body }, mealAllowedFields)
+      keepAllowedFieldsOnObj(
+        { userId, caloriesTotal, ...body },
+        mealAllowedFields
+      )
     );
 
     // update day progrss
@@ -96,9 +78,7 @@ const createMeal = async function (req, res) {
     // if monitoring by calories increase the dietGoalProgress of day by the
     // reduced number of calories of received foods
     if (monitoringByCalories)
-      newDietGoalProgress =
-        dietGoalProgress +
-        foods.reduce((acc, f) => acc + (f.quantity / 100) * f.baseCalories, 0);
+      newDietGoalProgress = dietGoalProgress + caloriesTotal;
 
     transaction.update(dayRef, { dietGoalProgress: newDietGoalProgress });
   });
@@ -112,27 +92,55 @@ const createMeal = async function (req, res) {
 
 // function roles:
 //  - extract data
-//  - validate data
 //  - update the meal data
 //  - if the monitoring type is calories, also update the
 //    corresponding day
 //  - send back response
 
 // throws err if:
-//  -
+//  - unexpected error
+
 const updateMeal = async function (req, res) {
   // extract data
   const {
     body,
-    day: { monitoringDietBy, dietGoalProgress },
     dayRef,
+    mealRef,
+    monitoringByCalories,
+    meal: { caloriesTotal: caloriesTotalOfMeal },
+    day: { dietGoalProgress },
   } = req;
+  const { foods } = body;
 
-  // validate data
+  // validate foods
+  const foodsValid = foods && Array.isArray(foods) && foods.length <= 0;
+
+  // calculate total calories
+  const caloriesTotal =
+    monitoringByCalories && foodsValid
+      ? foods.reduce((acc, f) => acc + (f.quantity / 100) * f.baseCalories, 0)
+      : null;
 
   // start transaction
-  // update meal
-  // update corresponding day if needed
+  await db.runTransaction(async (transaction) => {
+    // update meal
+    transaction.update(
+      mealRef,
+      keepAllowedFieldsOnObj({ caloriesTotal, ...body }, mealAllowedFields)
+    );
+
+    // update corresponding day if needed
+    if (monitoringByCalories && foodsValid) {
+      const dietGoalProgressWithoutCurrentMeal =
+        dietGoalProgress - caloriesTotalOfMeal;
+
+      const newDietGoalProgress =
+        dietGoalProgressWithoutCurrentMeal + caloriesTotal;
+
+      transaction.update(dayRef, { dietGoalProgress: newDietGoalProgress });
+    }
+  });
+
   // send res
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
@@ -140,7 +148,25 @@ const updateMeal = async function (req, res) {
   });
 };
 
-const removeMeal = async function (req, res) {};
+// function roles:
+//  - get the meal ref
+//  - delete doc
+//  - update day
+//  - send res
+
+// throws err if:
+//  - unexpected err
+
+const removeMeal = async function (req, res) {
+  const {
+    mealRef,
+    dayRef,
+    monitoringByCalories,
+    monitoringByMeals,
+    meal: { caloriesTotal: caloriesTotalOfMeal },
+    day: { dietGoalProgress },
+  } = req;
+};
 
 const mealsController = {
   createMeal,

@@ -9,6 +9,10 @@ const mealsRouter = function (fastify, _options, done) {
   fastify.decorate("pet", "");
   fastify.decorate("day", "");
   fastify.decorate("dayRef", "");
+  fastify.decorate("monitoringByMeals", "");
+  fastify.decorate("monitoringByCalories", "");
+  fastify.decorate("meal", "");
+  fastify.decorate("mealRef", "");
 
   fastify.post(
     "/",
@@ -18,6 +22,7 @@ const mealsRouter = function (fastify, _options, done) {
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
         mealsMiddleware.documentsCorrespond,
+        mealsMiddleware.validateMealDataPost,
       ],
     },
     mealsController.createMeal
@@ -30,9 +35,24 @@ const mealsRouter = function (fastify, _options, done) {
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
         mealsMiddleware.documentsCorrespond,
+        mealsMiddleware.validateMealDataPatch,
+        mealsMiddleware.checkMealExists,
       ],
     },
     mealsController.updateMeal
+  );
+  fastify.delete(
+    "/remove/:id",
+    {
+      preHandler: [
+        authMiddleware.protectRoute,
+        petsMiddleware.checkPetExists,
+        daysMiddleware.checkDayExists,
+        mealsMiddleware.documentsCorrespond,
+        mealsMiddleware.checkMealExists,
+      ],
+    },
+    mealsController.removeMeal
   );
 
   done();
