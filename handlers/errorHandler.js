@@ -4,7 +4,7 @@ const errorHandler = function (error, _req, res) {
   console.log(error);
 
   const customErr = error.isCustomError;
-  const statusCode = customErr ? error.statusCode : 400;
+  const statusCode = customErr ? error.statusCode : 500;
   const errorObj = customErr
     ? error.errorWithoutStackTrace()
     : new GenericError({

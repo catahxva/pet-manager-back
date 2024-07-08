@@ -5,13 +5,14 @@ import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
 import validateData from "../utils/validateData.js";
 import isEmptyObject from "../utils/isEmptyObject.js";
 import FieldToValidate from "../utils/FieldToValidate.js";
+import Criteria from "../utils/Criteria.js";
 import { GenericError, ComplexError } from "../utils/CustomErrors.js";
 import {
   petValidationErrorMessages,
   petErrorMessages,
   petSuccessMessages,
 } from "../utils/messages/petMessages.js";
-import { getOneById } from "../utils/dbMethods.js";
+import { getMultipleByCriteria, getOneById } from "../utils/dbMethods.js";
 
 // CONTROLLER FOR:
 //              - CREATING A PET
@@ -229,18 +230,59 @@ const updatePet = async function (req, res) {
 const removePet = async function (req, res) {
   // extract data
   const {
-    params: { id },
+    params: { id: petId },
   } = req;
 
   // check if pet exists
   const { doc: pet, docRef: petRef } = await getOneById(
     db,
     process.env.DB_COLLECTION_PETS,
-    id
+    petId
   );
 
   // check if pet exists
   if (!pet) throw new GenericError({ message: petErrorMessages.pet_not_found });
+
+  const criteriaArr = [new Criteria("petId", "==", petId)];
+
+  // get doc refs
+  const [
+    { docsRefs: dayRefs },
+    { docsRefs: monthRefs },
+    { docsRefs: yearRefs },
+    { docsRefs: mealRefs },
+  ] = await Promise.all([
+    getMultipleByCriteria(db, process.env.DB_COLLECTION_DAYS, criteriaArr),
+    getMultipleByCriteria(db, process.env.DB_COLLECTION_MONTHS, criteriaArr),
+    getMultipleByCriteria(db, process.env.DB_COLLECTION_YEARS, criteriaArr),
+    getMultipleByCriteria(db, process.env.DB_COLLECTION_MEALS, criteriaArr),
+  ]);
+
+  // create one main arr
+  const allDocRefs = [...dayRefs, ...monthRefs, ...yearRefs, ...mealRefs];
+
+  // promisify delete operation
+  const promisifiedTransactionDelete = function (tr, ref) {
+    return new Promise((resolve, reject) => {
+      try {
+        tr.delete(ref);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
+
+  // delete doc and other related data
+  await db.runTransaction(async (transaction) => {
+    transaction.delete(petRef);
+
+    await Promise.all(
+      allDocRefs.map((ref) => promisifiedTransactionDelete(transaction, ref))
+    );
+  });
+
+  res.code(204).send({});
 };
 
 const petsController = { createPet, updatePet, removePet };

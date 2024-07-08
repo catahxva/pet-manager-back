@@ -46,12 +46,10 @@ import createCrypto32Token from "../utils/createCrypto32Token.js";
 //  - email sending fails
 //  - unexpected error
 
-const signup = async function (req, res, done) {
+const signup = async function (req, res) {
   // data extraction
   const body = req.body;
   const { username, email, password } = body;
-
-  // data validation
 
   // validation error
   const validationErrors = validateData(
@@ -408,6 +406,14 @@ const resetPass = async function (req, res) {
     message: authSuccessMessages.reset_pass,
   });
 };
+
+// function roles:
+//  - extract data
+
+//  throws err if:
+//  -
+
+const deleteAccount = async function (req, res) {};
 
 // auth controller is a simple object literal which will contain
 // all the auth related controllers

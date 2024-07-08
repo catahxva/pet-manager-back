@@ -29,7 +29,7 @@ const petsRouter = function (fastify, _options, done) {
     },
     petsController.updatePet
   );
-  fastify.patch(
+  fastify.delete(
     "/remove/:id",
     {
       preHandler: [
