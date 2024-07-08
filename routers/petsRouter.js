@@ -5,22 +5,38 @@ import authMiddleware from "../middleware/authMiddleware.js";
 
 const petsRouter = function (fastify, _options, done) {
   // decorate req obj to allow user property
+  fastify.decorate("token", "");
   fastify.decorate("user", "");
 
   // routing
   fastify.post(
     "/",
-    { preHandler: authMiddleware.protectRoute },
+    {
+      preHandler: [
+        authMiddleware.getTokenFromHeaders,
+        authMiddleware.protectRoute,
+      ],
+    },
     petsController.createPet
   );
   fastify.patch(
     "/update/:id",
-    { preHandler: authMiddleware.protectRoute },
+    {
+      preHandler: [
+        authMiddleware.getTokenFromHeaders,
+        authMiddleware.protectRoute,
+      ],
+    },
     petsController.updatePet
   );
   fastify.patch(
     "/remove/:id",
-    { preHandler: authMiddleware.protectRoute },
+    {
+      preHandler: [
+        authMiddleware.getTokenFromHeaders,
+        authMiddleware.protectRoute,
+      ],
+    },
     petsController.removePet
   );
 

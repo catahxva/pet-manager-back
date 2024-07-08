@@ -1,14 +1,11 @@
 // imports:
-import crypto from "crypto";
 import bcrypt from "bcrypt";
 import db from "../db.js";
 import validateData from "../utils/validateData.js";
 import checkDataUniqueness from "../utils/checkDataUniqueness.js";
 import FieldToValidate from "../utils/FieldToValidate.js";
 import FieldToCheckUniqueness from "../utils/FieldToCheckUniqueness.js";
-import Criteria from "../utils/Criteria.js";
 import isEmptyObject from "../utils/isEmptyObject.js";
-import extractTokenFromHeaders from "../utils/extractTokenFromHeaders.js";
 import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
 import authAllowedFields from "../utils/allowedFields/authAllowedFields.js";
 import sendEmail from "../utils/sendEmail.js";
@@ -19,8 +16,8 @@ import {
   authErrorMessages,
   authSuccessMessages,
 } from "../utils/messages/authMessages.js";
-import { getOneByCriteria } from "../utils/dbMethods.js";
 import { ComplexError, GenericError } from "../utils/CustomErrors.js";
+import createCrypto32Token from "../utils/createCrypto32Token.js";
 
 // CONTROLLER FOR:
 //              - SIGNUP
@@ -95,9 +92,8 @@ const signup = async function (req, res, done) {
   // create token && create user && send email
   await db.runTransaction(async (transaction) => {
     // create token
-    const verifyEmailToken = crypto.randomBytes(32).toString("hex");
-    const verifyEmailTokenExpirationTime =
-      Date.now() + process.env.VERIFY_ACCOUNT_TOKEN_EXPIRATION_TIME;
+    const [verifyEmailToken, verifyEmailTokenExpirationTime] =
+      createCrypto32Token(process.env.VERIFY_ACCOUNT_TOKEN_EXPIRATION_TIME);
 
     // set verified status as false
     const verified = false;
@@ -128,11 +124,11 @@ const signup = async function (req, res, done) {
     );
 
     // send email
-    const emailTo = email;
-    const emailSubject = "Verify account";
-    const emailText = verifyEmailToken;
-
-    await sendEmail(emailTo, emailSubject, emailText);
+    await sendEmail({
+      to: email,
+      subject: "Verify account",
+      text: verifyEmailToken,
+    });
   });
 
   // send response
@@ -143,19 +139,21 @@ const signup = async function (req, res, done) {
 };
 
 // function roles:
-//  - extract email/username from req body
-//  - find user based on provided credential
-//  - create verification token
-//  - add the verification token to the found user doc
-//  - send a new email to the email address of the user
+//  - extract data
+//  - validate data
+//  - update email token
+//  - send new email
+//  - send new res
 
 // throws error if:
-//  - no user was found based on received credentials
+//  - invalid user input
 //  - unexpected error
 
 const resendVerification = async function (req, res) {
   // extract data
   const {
+    userData,
+    userRef,
     body: { username, email },
   } = req;
 
@@ -170,30 +168,11 @@ const resendVerification = async function (req, res) {
       errorsObject: validationErrors,
     });
 
-  // query for user based on given credential
-  const receivedCredential = username || email;
-  const fieldToQueryBy = username ? "username" : "email";
-
-  const {
-    empty: noUser,
-    docData: userData,
-    docRef: userRef,
-  } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
-    new Criteria(fieldToQueryBy, "==", receivedCredential),
-  ]);
-
-  if (noUser)
-    throw new GenericError({ message: authErrorMessages.user_not_found });
-
-  if (userData.verified)
-    throw new GenericError({ message: authErrorMessages.user_not_verified });
-
   // update user with a new verification token && send email
   await db.runTransaction(async (transaction) => {
     // create token
-    const verifyEmailToken = crypto.randomBytes(32).toString("hex");
-    const verifyEmailTokenExpirationTime =
-      Date.now() + process.env.VERIFY_ACCOUNT_TOKEN_EXPIRATION_TIME;
+    const [verifyEmailToken, verifyEmailTokenExpirationTime] =
+      createCrypto32Token(process.env.VERIFY_ACCOUNT_TOKEN_EXPIRATION_TIME);
 
     // update user
     transaction.update(userRef, {
@@ -202,11 +181,11 @@ const resendVerification = async function (req, res) {
     });
 
     // send email
-    const emailTo = userData.email;
-    const emailSubject = "Verify account";
-    const emailText = verifyEmailToken;
-
-    await sendEmail(emailTo, emailSubject, emailText);
+    await sendEmail({
+      to: userData.email,
+      subject: "Verify Account",
+      text: verifyEmailToken,
+    });
   });
 
   // send response
@@ -217,35 +196,16 @@ const resendVerification = async function (req, res) {
 };
 
 // function roles:
-//  - extract verification token
-//  - find user based on the verification token
-//  - update the verified status of the user
-//  - create a jwt token
-//  - send the jwt token back to the client to store
+//  - extract data
+//  - update user doc
+//  - create jwt token
+//  - send res
 
 // throws error if:
-//  - token does not exist
-//  - user is not found
 //  - unexpected error
 
 const verifyAccount = async function (req, res) {
-  // extract token
-  const token = extractTokenFromHeaders(req);
-
-  if (!token)
-    throw new GenericError({ message: authErrorMessages.token_not_received });
-
-  // query for user based on token
-  const {
-    empty: noUser,
-    doc: userDoc,
-    docRef: userRef,
-  } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
-    new Criteria("verifyEmailToken", "==", token),
-  ]);
-
-  if (noUser)
-    throw new GenericError({ message: authErrorMessages.user_not_found });
+  const { userDoc, userRef } = req;
 
   // update verification status and remove current token
   await userRef.update({
@@ -266,26 +226,23 @@ const verifyAccount = async function (req, res) {
 };
 
 // function roles:
-//  - extract data from req body
-//  - find user based on the received credentials
-//  - verify password
-//  - verify the verified status of the account
+//  - extract data
+//  - validate data
+//  - compare passwords
 //  - create jwt token
-//  - send the jwt token back to the client
+//  - send res
 
 // throws error if:
-//  - no user found
-//  - user is not verified
 //  - passwords dont match
 //  - unexpected error
 
 const login = async function (req, res) {
   // extract data
   const {
+    userDoc,
+    userData,
     body: { username, email, password },
   } = req;
-
-  // validate data
 
   // validation error
   const validationErrors = validateData(
@@ -302,28 +259,8 @@ const login = async function (req, res) {
       errorsObject: validationErrors,
     });
 
-  // query user based on credentials
-  const receivedCredential = username || email;
-  const fieldToQueryBy = username ? "username" : "email";
-
-  const {
-    empty: noUser,
-    doc: userDoc,
-    docData: userData,
-  } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
-    new Criteria(fieldToQueryBy, "==", receivedCredential),
-  ]);
-
   // compare passwords
   const passwordsMatch = await bcrypt.compare(password, userData.password);
-
-  // check if user was not found
-  if (noUser)
-    throw new GenericError({ message: authErrorMessages.user_not_found });
-
-  // check verified status
-  if (!userData.verified)
-    throw new GenericError({ message: authErrorMessages.user_not_verified });
 
   // check if passwords match
   if (!passwordsMatch)
@@ -345,15 +282,11 @@ const login = async function (req, res) {
 //  - blacklist the given token
 
 // throws error if:
-//  - no token found
 //  - unexpected error
 
 const logout = async function (req, res) {
   // extract token
-  const token = extractTokenFromHeaders(req);
-
-  if (!token)
-    throw new GenericError({ message: authErrorMessages.token_not_received });
+  const { token } = req;
 
   // blacklist token
   const collectionRef = db.collection(
@@ -371,22 +304,22 @@ const logout = async function (req, res) {
 };
 
 // function roles
-//  - extract data from req body
-//  - find user based on received credentials
-//  - check verified status
-//  - create a password reset token
-//  - update user doc with the new token
-//  - send email to email address of user with the new
-//      password reset token
+//  - extract data
+//  - validate data
+//  - create token
+//  - update user
+//  - send email
+//  - send response
 
 // throws error if:
-//  - no user found
-//  - user is not verified
-//  - unexpected error
+//  - invalid user input
+//  - unexpected errof
 
 const forgotPass = async function (req, res) {
   // extract data
   const {
+    userData,
+    userRef,
     body: { username, email },
   } = req;
 
@@ -403,30 +336,11 @@ const forgotPass = async function (req, res) {
       errorsObject: validationErrors,
     });
 
-  // query user based on credential
-  const receivedCredential = username || email;
-  const fieldToQueryBy = username ? "username" : "email";
-
-  const {
-    empty: noUser,
-    docData: userData,
-    docRef: userRef,
-  } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
-    new Criteria(fieldToQueryBy, "==", receivedCredential),
-  ]);
-
-  if (noUser)
-    throw new GenericError({ message: authErrorMessages.user_not_found });
-
-  if (!userData.verified)
-    throw new GenericError({ message: authErrorMessages.user_not_verified });
-
   // create token && update user && send email
   await db.runTransaction(async (transaction) => {
     // create token
-    const changePasswordToken = crypto.randomBytes(32).toString("hex");
-    const changePasswordTokenExpirationTime =
-      Date.now() + process.env.CHANGE_PASS_TOKEN_EXPIRATION_TIME;
+    const [changePasswordToken, changePasswordTokenExpirationTime] =
+      createCrypto32Token(process.env.CHANGE_PASS_TOKEN_EXPIRATION_TIME);
 
     // update user
     transaction.update(userRef, {
@@ -435,11 +349,11 @@ const forgotPass = async function (req, res) {
     });
 
     // send email
-    const emailTo = userData.email;
-    const emailSubject = "Forgot pass";
-    const emailText = changePasswordToken;
-
-    await sendEmail(emailTo, emailSubject, emailText);
+    await sendEmail({
+      to: userData.email,
+      subject: "Forgot Pass",
+      text: changePasswordToken,
+    });
   });
 
   // send response
@@ -451,24 +365,19 @@ const forgotPass = async function (req, res) {
 
 // function roles:
 //  - extract data
-//  - find user doc based on the extracted token
+//  - validate data
 //  - update the password
 
 // throws error if:
-//  - no token
-//  - no user
+//  - invalid user input
 //  - unexpected error
 
 const resetPass = async function (req, res) {
   // extract data
-  const token = extractTokenFromHeaders(req);
   const {
+    userRef,
     body: { password },
   } = req;
-
-  // validate data
-  if (!token)
-    throw new GenericError({ message: authErrorMessages.token_not_received });
 
   // validation error
   const validationErrors = validateData(
@@ -481,21 +390,6 @@ const resetPass = async function (req, res) {
       errorType: process.env.ERROR_TYPE_VALIDATION,
       errorsObject: validationErrors,
     });
-
-  //query user
-  const {
-    empty: noUser,
-    docData: userData,
-    docRef: userRef,
-  } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, [
-    new Criteria("changePasswordToken", "==", token),
-  ]);
-
-  if (noUser)
-    throw new GenericError({ message: authErrorMessages.user_not_found });
-
-  if (!userData.verified)
-    throw new GenericError({ message: authErrorMessages.user_not_verified });
 
   // update pass
 

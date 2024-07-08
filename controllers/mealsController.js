@@ -1,12 +1,7 @@
 import db from "../db.js";
 import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
-import validateData from "../utils/validateData.js";
-import FieldToValidate from "../utils/FieldToValidate.js";
-import isEmptyObject from "../utils/isEmptyObject.js";
 import mealAllowedFields from "../utils/allowedFields/mealAllowedFields.js";
-import { GenericError, ComplexError } from "../utils/CustomErrors.js";
-import { mealValidationErrorMessages } from "../utils/messages/mealMessages.js";
-import { getOneById } from "../utils/dbMethods.js";
+import { mealSuccessMessages } from "../utils/messages/mealMessages.js";
 
 // CONTROLLER FOR:
 //              - CREATING MEAL
@@ -86,7 +81,7 @@ const createMeal = async function (req, res) {
   // send response
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
-    message: "Meal added successfully!",
+    message: mealSuccessMessages.meal_created,
   });
 };
 
@@ -119,7 +114,7 @@ const updateMeal = async function (req, res) {
   const caloriesTotal =
     monitoringByCalories && foodsValid
       ? foods.reduce((acc, f) => acc + (f.quantity / 100) * f.baseCalories, 0)
-      : null;
+      : caloriesTotalOfMeal;
 
   // start transaction
   await db.runTransaction(async (transaction) => {
@@ -144,12 +139,12 @@ const updateMeal = async function (req, res) {
   // send res
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
-    message: "Meal updated successfully!",
+    message: mealSuccessMessages.meal_updated,
   });
 };
 
 // function roles:
-//  - get the meal ref
+//  - extract data
 //  - delete doc
 //  - update day
 //  - send res
@@ -158,6 +153,7 @@ const updateMeal = async function (req, res) {
 //  - unexpected err
 
 const removeMeal = async function (req, res) {
+  // extract data
   const {
     mealRef,
     dayRef,
@@ -166,6 +162,26 @@ const removeMeal = async function (req, res) {
     meal: { caloriesTotal: caloriesTotalOfMeal },
     day: { dietGoalProgress },
   } = req;
+
+  // start transaction
+  await db.runTransaction(async (transaction) => {
+    // delete the meal documentn
+    transaction.delete(mealRef);
+
+    // recalculate diet goal progress
+    let newDietGoalProgress;
+
+    if (monitoringByMeals) newDietGoalProgress = dietGoalProgress - 1;
+
+    if (monitoringByCalories)
+      newDietGoalProgress = dietGoalProgress - caloriesTotalOfMeal;
+
+    // update the day doc
+    transaction.update(dayRef, { dietGoalProgress: newDietGoalProgress });
+  });
+
+  // send response
+  res.code(204).send({});
 };
 
 const mealsController = {

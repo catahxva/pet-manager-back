@@ -5,6 +5,7 @@ import daysMiddleware from "../middleware/daysMiddleware.js";
 import mealsMiddleware from "../middleware/mealsMiddleware.js";
 
 const mealsRouter = function (fastify, _options, done) {
+  fastify.decorate("token", "");
   fastify.decorate("user", "");
   fastify.decorate("pet", "");
   fastify.decorate("day", "");
@@ -18,6 +19,7 @@ const mealsRouter = function (fastify, _options, done) {
     "/",
     {
       preHandler: [
+        authMiddleware.getTokenFromHeaders,
         authMiddleware.protectRoute,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
@@ -31,6 +33,7 @@ const mealsRouter = function (fastify, _options, done) {
     "/update/:id",
     {
       preHandler: [
+        authMiddleware.getTokenFromHeaders,
         authMiddleware.protectRoute,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
@@ -45,6 +48,7 @@ const mealsRouter = function (fastify, _options, done) {
     "/remove/:id",
     {
       preHandler: [
+        authMiddleware.getTokenFromHeaders,
         authMiddleware.protectRoute,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,

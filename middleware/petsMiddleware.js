@@ -1,6 +1,7 @@
 import db from "../db.js";
 import { GenericError } from "../utils/CustomErrors.js";
 import { getOneById } from "../utils/dbMethods.js";
+import { petErrorMessages } from "../utils/messages/petMessages.js";
 
 const checkPetExists = async function (req, _res) {
   const {
@@ -9,7 +10,7 @@ const checkPetExists = async function (req, _res) {
 
   if (!petId)
     throw new GenericError({
-      message: "Pet ID is required in order to complete this action.",
+      message: petErrorMessages.no_id,
     });
 
   const { doc: petDoc, docData: petData } = await getOneById(
@@ -18,7 +19,11 @@ const checkPetExists = async function (req, _res) {
     petId
   );
 
-  if (!petDoc) throw new GenericError({ message: "", statusCode: 404 });
+  if (!petDoc)
+    throw new GenericError({
+      message: petErrorMessages.pet_not_found,
+      statusCode: 404,
+    });
 
   req.pet = { id: petDoc.id, ...petData };
 };

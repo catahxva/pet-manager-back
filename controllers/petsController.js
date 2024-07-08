@@ -151,7 +151,6 @@ const updatePet = async function (req, res) {
   const { age, ageIn, species, monitoringDietBy, dietGoal } = body;
 
   // validate data
-  if (!id) throw new GenericError({ message: petErrorMessages.no_id });
 
   // validation error
   const validationErrors = validateData(
@@ -227,7 +226,22 @@ const updatePet = async function (req, res) {
 
 // throws err if:
 
-const removePet = async function (req, res) {};
+const removePet = async function (req, res) {
+  // extract data
+  const {
+    params: { id },
+  } = req;
+
+  // check if pet exists
+  const { doc: pet, docRef: petRef } = await getOneById(
+    db,
+    process.env.DB_COLLECTION_PETS,
+    id
+  );
+
+  // check if pet exists
+  if (!pet) throw new GenericError({ message: petErrorMessages.pet_not_found });
+};
 
 const petsController = { createPet, updatePet, removePet };
 

@@ -3,6 +3,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import petsMiddleware from "../middleware/petsMiddleware.js";
 
 const daysRouter = function (fastify, _options, done) {
+  fastify.decorate("token", "");
   fastify.decorate("user", "");
   fastify.decorate("pet", "");
 
@@ -10,7 +11,11 @@ const daysRouter = function (fastify, _options, done) {
   fastify.post(
     "/",
     {
-      preHandler: [authMiddleware.protectRoute, petsMiddleware.checkPetExists],
+      preHandler: [
+        authMiddleware.getTokenFromHeaders,
+        authMiddleware.protectRoute,
+        petsMiddleware.checkPetExists,
+      ],
     },
     daysController.createDay
   );

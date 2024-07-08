@@ -1,10 +1,14 @@
 import db from "../db.js";
 import isEmptyObject from "../utils/isEmptyObject.js";
 import validateData from "../utils/validateData.js";
-import { mealValidationErrorMessages } from "../utils/messages/mealMessages.js";
+import {
+  mealValidationErrorMessages,
+  mealErrorMessages,
+} from "../utils/messages/mealMessages.js";
 import { GenericError, ComplexError } from "../utils/CustomErrors.js";
 import FieldToValidate from "../utils/FieldToValidate.js";
 import { getOneById } from "../utils/dbMethods.js";
+import { generalErrorMessages } from "../utils/messages/generalMessages.js";
 
 // check if documents correspond
 const documentsCorrespond = function (req, _res, done) {
@@ -17,15 +21,15 @@ const documentsCorrespond = function (req, _res, done) {
 
   // check if user is owner of current pet
   if (userId !== userIdOfPet)
-    throw new GenericError({ message: "User and pet dont match" });
+    throw new GenericError({ message: generalErrorMessages.user_pet_no_match });
 
   // check if day is linked to the current pet
   if (petId !== petIdOfDay)
-    throw new GenericError({ message: "Pet and day dont match" });
+    throw new GenericError({ message: generalErrorMessages.pet_day_no_match });
 
   // check if day is linked to current user
   if (userId !== userIdOfDay)
-    throw new GenericError({ message: "User and day dont match" });
+    throw new GenericError({ message: generalErrorMessages.user_day_no_match });
 
   done();
 };
@@ -37,15 +41,10 @@ const validateMealDataFactory = function (httpMethod) {
   return function (req, _res, done) {
     // extract data
     const {
-      day: { monitoringDietBy },
+      monitoringByMeals,
+      monitoringByCalories,
       body: { description, foods },
     } = req;
-
-    // define monitoringOptions
-    const monitoringByMeals =
-      monitoringDietBy === process.env.PET_FIELD_DIET_BY_MEALS;
-    const monitoringByCalories =
-      monitoringDietBy === process.env.PET_FIELD_DIET_BY_CALORIES;
 
     // create a dynamic validation obj based on received method
     const dynamicFieldToValidate =
@@ -79,10 +78,6 @@ const validateMealDataFactory = function (httpMethod) {
         errorsObject: validationErrors,
       });
 
-    // put monitoring options on req
-    req.monitoringByMeals = monitoringByMeals;
-    req.monitoringByCalories = monitoringByCalories;
-
     done();
   };
 };
@@ -91,7 +86,7 @@ const validateMealDataFactory = function (httpMethod) {
 const validateMealDataPost = validateMealDataFactory("post");
 const validateMealDataPatch = validateMealDataFactory("patch");
 
-const checkMealExists = async function (req, res) {
+const checkMealExists = async function (req, _res) {
   const {
     params: { id: mealId },
   } = req;
@@ -103,7 +98,10 @@ const checkMealExists = async function (req, res) {
   } = await getOneById(db, process.env.DB_COLLECTION_MEALS, mealId);
 
   if (!mealDoc)
-    throw new GenericError({ message: "No meal found", statusCode: 404 });
+    throw new GenericError({
+      message: mealErrorMessages.meal_not_found,
+      statusCode: 404,
+    });
 
   const meal = { id: mealDoc.id, ...mealData };
 

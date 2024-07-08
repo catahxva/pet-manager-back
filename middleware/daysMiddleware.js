@@ -1,6 +1,7 @@
 import db from "../db.js";
 import { GenericError } from "../utils/CustomErrors.js";
 import { getOneById } from "../utils/dbMethods.js";
+import { dayErrorMessages } from "../utils/messages/dayMessages.js";
 
 const checkDayExists = async function (req, res) {
   const {
@@ -9,7 +10,7 @@ const checkDayExists = async function (req, res) {
 
   if (!dayId)
     throw new GenericError({
-      message: "Day ID is required in order to complete this action.",
+      message: dayErrorMessages.no_day_id,
     });
 
   const {
@@ -18,10 +19,18 @@ const checkDayExists = async function (req, res) {
     docRef: dayRef,
   } = await getOneById(db, process.env.DB_COLLECTION_DAYS, dayId);
 
-  if (!dayDoc) throw new GenericError({ message: "", statusCode: 404 });
+  if (!dayDoc)
+    throw new GenericError({
+      message: dayErrorMessages.day_does_not_exist,
+      statusCode: 404,
+    });
 
   req.day = { id: dayDoc.id, ...dayData };
   req.dayRef = dayRef;
+  req.monitoringByMeals =
+    dayData.monitoringDietBy === process.env.PET_FIELD_DIET_BY_MEALS;
+  req.monitoringByCalories =
+    dayData.monitoringDietBy === process.env.PET_FIELD_DIET_BY_CALORIES;
 };
 
 const daysMiddleware = { checkDayExists };
