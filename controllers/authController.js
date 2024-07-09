@@ -407,14 +407,6 @@ const resetPass = async function (req, res) {
   });
 };
 
-// function roles:
-//  - extract data
-
-//  throws err if:
-//  -
-
-const deleteAccount = async function (req, res) {};
-
 // auth controller is a simple object literal which will contain
 // all the auth related controllers
 const authController = {

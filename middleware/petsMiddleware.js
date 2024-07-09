@@ -3,7 +3,7 @@ import { GenericError } from "../utils/CustomErrors.js";
 import { getOneById } from "../utils/dbMethods.js";
 import { petErrorMessages } from "../utils/messages/petMessages.js";
 
-const checkPetExists = async function (req, _res) {
+const extractPetIdBody = function (req, res) {
   const {
     body: { petId },
   } = req;
@@ -13,11 +13,25 @@ const checkPetExists = async function (req, _res) {
       message: petErrorMessages.no_id,
     });
 
-  const { doc: petDoc, docData: petData } = await getOneById(
-    db,
-    process.env.DB_COLLECTION_PETS,
-    petId
-  );
+  req.petId = petId;
+};
+
+const extractPetIdParams = function (req, _res) {
+  const {
+    params: { id: petId },
+  } = req;
+
+  req.petId = petId;
+};
+
+const checkPetExists = async function (req, _res) {
+  const { petId } = req;
+
+  const {
+    doc: petDoc,
+    docData: petData,
+    docRef: petRef,
+  } = await getOneById(db, process.env.DB_COLLECTION_PETS, petId);
 
   if (!petDoc)
     throw new GenericError({
@@ -26,9 +40,12 @@ const checkPetExists = async function (req, _res) {
     });
 
   req.pet = { id: petDoc.id, ...petData };
+  req.petRef = petRef;
 };
 
 const petsMiddleware = {
+  extractPetIdBody,
+  extractPetIdParams,
   checkPetExists,
 };
 

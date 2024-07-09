@@ -5,6 +5,7 @@ import petsRouter from "./routers/petsRouter.js";
 import daysRouter from "./routers/daysRouter.js";
 import mealsRouter from "./routers/mealsRouter.js";
 import foodsRouter from "./routers/foodsRouter.js";
+import appoinmentsRouter from "./routers/appoinmentsRouter.js";
 import errorHandler from "./handlers/errorHandler.js";
 
 // create app
@@ -18,6 +19,9 @@ fastifyApp.register(petsRouter, { prefix: `${startingPrefix}/pets` });
 fastifyApp.register(daysRouter, { prefix: `${startingPrefix}/days` });
 fastifyApp.register(mealsRouter, { prefix: `${startingPrefix}/meals` });
 fastifyApp.register(foodsRouter, { prefix: `${startingPrefix}/foods` });
+fastifyApp.register(appoinmentsRouter, {
+  prefix: `${startingPrefix}/appointments`,
+});
 
 // global error handler
 fastifyApp.setErrorHandler(errorHandler);

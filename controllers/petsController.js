@@ -12,7 +12,7 @@ import {
   petErrorMessages,
   petSuccessMessages,
 } from "../utils/messages/petMessages.js";
-import { getMultipleByCriteria, getOneById } from "../utils/dbMethods.js";
+import { getMultipleByCriteria } from "../utils/dbMethods.js";
 
 // CONTROLLER FOR:
 //              - CREATING A PET
@@ -144,14 +144,9 @@ const createPet = async function (req, res) {
 
 const updatePet = async function (req, res) {
   // extract data
-  const {
-    params: { id },
-    body,
-  } = req;
+  const { body, petRef } = req;
 
   const { age, ageIn, species, monitoringDietBy, dietGoal } = body;
-
-  // validate data
 
   // validation error
   const validationErrors = validateData(
@@ -195,16 +190,6 @@ const updatePet = async function (req, res) {
       errorsObject: validationErrors,
     });
 
-  // get the pet
-  const { doc: pet, docRef: petRef } = await getOneById(
-    db,
-    process.env.DB_COLLECTION_PETS,
-    id
-  );
-
-  // check if pet exists
-  if (!pet) throw new GenericError({ message: petErrorMessages.pet_not_found });
-
   // update pet
   await petRef.update(keepAllowedFieldsOnObj(body, petAllowedFields));
 
@@ -216,9 +201,7 @@ const updatePet = async function (req, res) {
 };
 
 // function roles:
-//  - extract id
-//  - query for the pet
-//  - check if it exists
+//  - extract data
 //  - delete pet
 //  - query for all days, months, years associated
 //      with the pet
@@ -229,19 +212,7 @@ const updatePet = async function (req, res) {
 
 const removePet = async function (req, res) {
   // extract data
-  const {
-    params: { id: petId },
-  } = req;
-
-  // check if pet exists
-  const { doc: pet, docRef: petRef } = await getOneById(
-    db,
-    process.env.DB_COLLECTION_PETS,
-    petId
-  );
-
-  // check if pet exists
-  if (!pet) throw new GenericError({ message: petErrorMessages.pet_not_found });
+  const { petRef } = req;
 
   const criteriaArr = [new Criteria("petId", "==", petId)];
 

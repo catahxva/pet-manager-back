@@ -21,6 +21,7 @@ const mealsRouter = function (fastify, _options, done) {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
         authMiddleware.protectRoute,
+        petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
         mealsMiddleware.documentsCorrespond,
@@ -35,6 +36,7 @@ const mealsRouter = function (fastify, _options, done) {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
         authMiddleware.protectRoute,
+        petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
         mealsMiddleware.documentsCorrespond,
@@ -50,6 +52,7 @@ const mealsRouter = function (fastify, _options, done) {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
         authMiddleware.protectRoute,
+        petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
         mealsMiddleware.documentsCorrespond,

@@ -56,10 +56,6 @@ const createDay = async function (req, res) {
   } = req;
   const { day, month, year } = body;
 
-  // validate data
-  if (!day || !month || !year)
-    throw new GenericError({ message: dayErrorMessages.no_required_data });
-
   // common criteria for queries
   const commonCriteria = [
     new Criteria("petId", "==", petId),
