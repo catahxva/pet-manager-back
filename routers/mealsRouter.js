@@ -5,6 +5,7 @@ import daysMiddleware from "../middleware/daysMiddleware.js";
 import mealsMiddleware from "../middleware/mealsMiddleware.js";
 import mealsValidationMiddleware from "../middleware/mealsValidationMiddleware.js";
 import generalMiddleware from "../middleware/generalMiddleware.js";
+import blacklistedTokenMiddleware from "../middleware/blacklistedTokenMiddleware.js";
 
 // router for:
 //  - creating a meal
@@ -14,6 +15,11 @@ import generalMiddleware from "../middleware/generalMiddleware.js";
 const mealsRouter = function (fastify, _options, done) {
   // decorators:
   fastify.decorate("token", "");
+  fastify.decorate("jwtId", "");
+  fastify.decorate("jwtIat", "");
+  fastify.decorate("jwtExp", "");
+  fastify.decorate("noUser", "");
+  fastify.decorate("userData", "");
   fastify.decorate("user", "");
   fastify.decorate("pet", "");
   fastify.decorate("day", "");
@@ -30,7 +36,13 @@ const mealsRouter = function (fastify, _options, done) {
     {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
-        authMiddleware.protectRoute,
+        blacklistedTokenMiddleware.checkForBlacklistedToken,
+        authMiddleware.decodeAuthToken,
+        authMiddleware.checkIfTokenExpired,
+        authMiddleware.getUserDocById,
+        authMiddleware.checkUserExists,
+        authMiddleware.checkUserChangedPass,
+        authMiddleware.checkIfUserNotVerified,
         petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
@@ -46,7 +58,13 @@ const mealsRouter = function (fastify, _options, done) {
     {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
-        authMiddleware.protectRoute,
+        blacklistedTokenMiddleware.checkForBlacklistedToken,
+        authMiddleware.decodeAuthToken,
+        authMiddleware.checkIfTokenExpired,
+        authMiddleware.getUserDocById,
+        authMiddleware.checkUserExists,
+        authMiddleware.checkUserChangedPass,
+        authMiddleware.checkIfUserNotVerified,
         petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
@@ -63,7 +81,13 @@ const mealsRouter = function (fastify, _options, done) {
     {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
-        authMiddleware.protectRoute,
+        blacklistedTokenMiddleware.checkForBlacklistedToken,
+        authMiddleware.decodeAuthToken,
+        authMiddleware.checkIfTokenExpired,
+        authMiddleware.getUserDocById,
+        authMiddleware.checkUserExists,
+        authMiddleware.checkUserChangedPass,
+        authMiddleware.checkIfUserNotVerified,
         petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,

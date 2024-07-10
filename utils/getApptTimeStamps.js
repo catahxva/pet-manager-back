@@ -1,8 +1,12 @@
 const getApptTimeStamps = function (startDateInfoArr, endDateInfoArr) {
   // dateInfoArr = [year, month (0 index), day, hour, minute]
 
-  const startTimeStamp = new Date(...startDateInfoArr).getTime();
-  const endTimeStamp = new Date(...endDateInfoArr).getTime();
+  const startTimeStamp = startDateInfoArr
+    ? new Date(...startDateInfoArr).getTime()
+    : null;
+  const endTimeStamp = endDateInfoArr
+    ? new Date(...endDateInfoArr).getTime()
+    : null;
 
   return [startTimeStamp, endTimeStamp];
 };

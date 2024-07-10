@@ -2,6 +2,7 @@ import daysController from "../controllers/daysController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import petsMiddleware from "../middleware/petsMiddleware.js";
 import generalMiddleware from "../middleware/generalMiddleware.js";
+import blacklistedTokenMiddleware from "../middleware/blacklistedTokenMiddleware.js";
 
 // router for:
 //  - create day
@@ -10,8 +11,19 @@ import generalMiddleware from "../middleware/generalMiddleware.js";
 const daysRouter = function (fastify, _options, done) {
   // decorators:
   fastify.decorate("token", "");
+  fastify.decorate("jwtId", "");
+  fastify.decorate("jwtIat", "");
+  fastify.decorate("jwtExp", "");
+  fastify.decorate("noUser", "");
+  fastify.decorate("userData", "");
   fastify.decorate("user", "");
   fastify.decorate("pet", "");
+
+  // get token
+  // check for blacklisted token
+  // decode jwt token
+  // check expired
+  //
 
   // routes:
   fastify.post(
@@ -19,7 +31,13 @@ const daysRouter = function (fastify, _options, done) {
     {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
-        authMiddleware.protectRoute,
+        blacklistedTokenMiddleware.checkForBlacklistedToken,
+        authMiddleware.decodeAuthToken,
+        authMiddleware.checkIfTokenExpired,
+        authMiddleware.getUserDocById,
+        authMiddleware.checkUserExists,
+        authMiddleware.checkUserChangedPass,
+        authMiddleware.checkIfUserNotVerified,
         petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         generalMiddleware.checkDateInfoDay,

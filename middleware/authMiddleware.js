@@ -33,69 +33,60 @@ const getTokenFromHeaders = function (req, _res, done) {
 };
 
 // function roles:
-//  - get token (1)
-//  - check if token is blacklisted (2)
-//  - decode token and extract data (3)
-//  - check if token is expired (4)
-//  - check if user exists (5)
-//  - check if user changed pass meanwhile (6)
-//  - check if user is verified (7)
-//  - put user on req obj (8)
-
-// throws err if:
-//  - token blacklisted
-//  - token expired
-//  - user doesnt exist
-//  - user changed pass
-//  - user is not verified
-//  - unexpected err
-const protectRoute = async function (req, res) {
+//  - decode token and extract data (1)
+//  - put data on req obj (2)
+const decodeAuthToken = async function (req, _res) {
   // 1
-  const { token } = req;
-
-  // 2
-  const { empty } = await getOneByCriteria(
-    db,
-    process.env.DB_COLLECTION_BLACKLISTED_TOKENS,
-    [new Criteria("token", "==", token)]
-  );
-
-  if (!empty)
-    throw new GenericError({ message: authErrorMessages.token_blacklisted });
-
-  // 3
   const { id, iat, exp } = await decodeJWTToken(token);
 
-  // 4
-  const currentTime = Date.now();
-  const expirationTimeInMs = exp * 1000;
+  // 2
+  req.jwtId = id;
+  req.jwtIat = iat;
+  req.jwtExp = exp;
+};
 
-  if (currentTime > expirationTimeInMs)
+// function roles:
+//  - extract data (1)
+//  - compare times (2)
+//  - forward req (3)
+
+// throws err if:
+//  - token is expired
+
+const checkIfTokenExpired = function (req, _res, done) {
+  // 1
+  const { jwtExp } = req;
+
+  // 2
+  const currentTime = Date.now();
+  const expirationTimeInMS = jwtExp * 1000;
+
+  if (currentTime > expirationTimeInMS)
     throw new GenericError({ message: authErrorMessages.token_expired });
 
-  // 5
+  // 3
+  done();
+};
+
+// function roles:
+//  - extract data (1)
+//  - get user based on data (2)
+//  - put info on req obj (3)
+
+const getUserDocById = async function (req, _res) {
+  // 1
+  const { jwtId } = req;
+
+  // 2
   const { doc: user, docData: userData } = await getOneById(
     db,
     process.env.DB_COLLECTION_USERS,
-    id
+    jwtId
   );
 
-  if (!user)
-    throw new GenericError({ message: authErrorMessages.user_not_found });
-
-  // 6
-  const { changedPasswordAt, verified } = userData;
-
-  const iatInMs = iat * 1000;
-
-  if (changedPasswordAt && changedPasswordAt > iatInMs)
-    throw new GenericError({ message: authErrorMessages.pass_changed });
-
-  // 7
-  if (!verified)
-    throw new GenericError({ message: authErrorMessages.user_not_verified });
-
-  // 8
+  // 3
+  req.noUser = !user;
+  req.userData = userData;
   req.user = { id: user.id, ...userData };
 };
 
@@ -211,6 +202,31 @@ const checkUserExists = function (req, _res, done) {
 
 // function roles:
 //  - extract data (1)
+//  - check if user changed pass since token was created (2)
+//  - forward req (3)
+
+// throws err if:
+//  - user did change pass
+
+const checkUserChangedPass = function (req, _res, done) {
+  // 1
+  const {
+    userData: { changedPasswordAt },
+    jwtIat,
+  } = req;
+
+  // 2
+  const iatInMS = jwtIat * 1000;
+
+  if (changedPasswordAt && changedPasswordAt > iatInMS)
+    throw new GenericError({ message: authErrorMessages.pass_changed });
+
+  // 3
+  done();
+};
+
+// function roles:
+//  - extract data (1)
 //  - check if user is verified (2)
 //  - forward request (3)
 
@@ -255,12 +271,15 @@ const checkIfUserNotVerified = function (req, _res, done) {
 
 const authMiddleware = {
   getTokenFromHeaders,
-  protectRoute,
+  decodeAuthToken,
+  checkIfTokenExpired,
+  getUserDocById,
   setReceivedCredentialCriteria,
   setVerifyAccountCriteria,
   setResetPassCriteria,
   getUserDocByCriteria,
   checkUserExists,
+  checkUserChangedPass,
   checkIfUserAlreadyVerified,
   checkIfUserNotVerified,
 };

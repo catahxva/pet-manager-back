@@ -3,6 +3,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import petsMiddleware from "../middleware/petsMiddleware.js";
 import petsValidationMiddleware from "../middleware/petsValidationMiddleware.js";
 import generalMiddleware from "../middleware/generalMiddleware.js";
+import blacklistedTokenMiddleware from "../middleware/blacklistedTokenMiddleware.js";
 
 // router for:
 //  - create pet
@@ -13,6 +14,12 @@ import generalMiddleware from "../middleware/generalMiddleware.js";
 const petsRouter = function (fastify, _options, done) {
   // decorators:
   fastify.decorate("token", "");
+  fastify.decorate("token", "");
+  fastify.decorate("jwtId", "");
+  fastify.decorate("jwtIat", "");
+  fastify.decorate("jwtExp", "");
+  fastify.decorate("noUser", "");
+  fastify.decorate("userData", "");
   fastify.decorate("validationErrors", "");
   fastify.decorate("user", "");
   fastify.decorate("petRef", "");
@@ -23,7 +30,13 @@ const petsRouter = function (fastify, _options, done) {
     {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
-        authMiddleware.protectRoute,
+        blacklistedTokenMiddleware.checkForBlacklistedToken,
+        authMiddleware.decodeAuthToken,
+        authMiddleware.checkIfTokenExpired,
+        authMiddleware.getUserDocById,
+        authMiddleware.checkUserExists,
+        authMiddleware.checkUserChangedPass,
+        authMiddleware.checkIfUserNotVerified,
         petsValidationMiddleware.validateCreatePet,
         generalMiddleware.checkValidationErrors,
       ],
@@ -35,7 +48,13 @@ const petsRouter = function (fastify, _options, done) {
     {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
-        authMiddleware.protectRoute,
+        blacklistedTokenMiddleware.checkForBlacklistedToken,
+        authMiddleware.decodeAuthToken,
+        authMiddleware.checkIfTokenExpired,
+        authMiddleware.getUserDocById,
+        authMiddleware.checkUserExists,
+        authMiddleware.checkUserChangedPass,
+        authMiddleware.checkIfUserNotVerified,
         petsValidationMiddleware.validateUpdatePet,
         generalMiddleware.checkValidationErrors,
         petsMiddleware.extractPetIdParams,
@@ -49,7 +68,13 @@ const petsRouter = function (fastify, _options, done) {
     {
       preHandler: [
         authMiddleware.getTokenFromHeaders,
-        authMiddleware.protectRoute,
+        blacklistedTokenMiddleware.checkForBlacklistedToken,
+        authMiddleware.decodeAuthToken,
+        authMiddleware.checkIfTokenExpired,
+        authMiddleware.getUserDocById,
+        authMiddleware.checkUserExists,
+        authMiddleware.checkUserChangedPass,
+        authMiddleware.checkIfUserNotVerified,
         petsMiddleware.extractPetIdParams,
         petsMiddleware.checkPetExists,
       ],

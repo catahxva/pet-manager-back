@@ -1,8 +1,6 @@
 import db from "../db.js";
 import appointmentAllowedFields from "../utils/allowedFields/appoinmentAllowedFields.js";
 import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
-import getApptTimeStamps from "../utils/getApptTimeStamps.js";
-import isNumber from "../utils/isNumber.js";
 
 // function roles:
 //  - extract data (1)
@@ -40,24 +38,28 @@ const createAppointment = async function (req, res) {
 };
 
 const updateAppointment = async function (req, res) {
-  const { apptData, apptRef, body } = req;
-  const {
-    day,
-    month,
-    year,
-    startHour,
-    startMinute,
-    endHour,
-    endMinute,
-    description,
-    type,
-  } = body;
+  const { apptRef, body } = req;
 
-  // verify if startHour && startHour !== apptData.startHour => recalculate startTimeStamp
+  await apptRef.update(keepAllowedFieldsOnObj(body, appointmentAllowedFields));
+
+  res.code(200).send({
+    status: process.env.RES_STATUS_SUCCESS,
+    message: "Appointment updated successfully",
+  });
 };
 
-const removeAppointment = async function (req, res) {};
+const removeAppointment = async function (req, res) {
+  const { apptRef } = req;
 
-const appointmentsController = { createAppointment, updateAppointment };
+  await apptRef.delete();
+
+  res.code(204).send({});
+};
+
+const appointmentsController = {
+  createAppointment,
+  updateAppointment,
+  removeAppointment,
+};
 
 export default appointmentsController;
