@@ -49,12 +49,12 @@ const signup = async function (req, res) {
 
   // 2 && 3
   await db.runTransaction(async (transaction) => {
+    // 2
     const [verifyEmailToken, verifyEmailTokenExpirationTime] =
       createCrypto32Token(process.env.VERIFY_ACCOUNT_TOKEN_EXPIRATION_TIME);
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // 2
     const collectionRef = db.collection(process.env.DB_COLLECTION_USERS);
     const newUserRef = collectionRef.doc();
 
