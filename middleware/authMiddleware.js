@@ -7,35 +7,53 @@ import { getOneByCriteria, getOneById } from "../utils/dbMethods.js";
 import { GenericError } from "../utils/CustomErrors.js";
 import { authErrorMessages } from "../utils/messages/authMessages.js";
 
-// MIDDLEWARE FOR:
-//              - GETTING TOKEN FROM HEADERS
-//              - PROTECTING ROUTES FROM UNAUTH USERS
-//              - SETTING CRITERIA FOR MULTIPLE ROUTES (USED TO GET USER DOC)
-//              - GETTING USER DOC BASED ON PREV SET CRITERIA
-//              - CHECKING IF USER EXISTS
-//              - CHECKINF IF USER IS ALREADY VERIFIED
-//              - CHECKING IF USER IS NOT VERIFIED
+// function roles:
+//  - extract token (1)
+//  - check if token exists (2)
+//  - put token on req obj
+//  - go forward with req
+
+// throws err if:
+//  - no token
+//  - unexpected err
 
 const getTokenFromHeaders = function (req, _res, done) {
-  // extract token
+  // 1
   const token = extractTokenFromHeaders(req);
 
-  // check if token exists
+  // 2
   if (!token)
     throw new GenericError({ message: authErrorMessages.token_not_received });
 
-  // put token on req obj
+  // 3
   req.token = token;
 
+  // 4
   done();
 };
 
-// protect other routes
+// function roles:
+//  - get token (1)
+//  - check if token is blacklisted (2)
+//  - decode token and extract data (3)
+//  - check if token is expired (4)
+//  - check if user exists (5)
+//  - check if user changed pass meanwhile (6)
+//  - check if user is verified (7)
+//  - put user on req obj (8)
+
+// throws err if:
+//  - token blacklisted
+//  - token expired
+//  - user doesnt exist
+//  - user changed pass
+//  - user is not verified
+//  - unexpected err
 const protectRoute = async function (req, res) {
-  // extract token
+  // 1
   const { token } = req;
 
-  // check if token was blacklisted
+  // 2
   const { empty } = await getOneByCriteria(
     db,
     process.env.DB_COLLECTION_BLACKLISTED_TOKENS,
@@ -45,42 +63,39 @@ const protectRoute = async function (req, res) {
   if (!empty)
     throw new GenericError({ message: authErrorMessages.token_blacklisted });
 
-  // decode token and extract daa
+  // 3
   const { id, iat, exp } = await decodeJWTToken(token);
 
-  // check if token is expired
+  // 4
   const currentTime = Date.now();
   const expirationTimeInMs = exp * 1000;
 
   if (currentTime > expirationTimeInMs)
     throw new GenericError({ message: authErrorMessages.token_expired });
 
-  // get user based on id decoded from token
+  // 5
   const { doc: user, docData: userData } = await getOneById(
     db,
     process.env.DB_COLLECTION_USERS,
     id
   );
 
-  // check if user exists
   if (!user)
     throw new GenericError({ message: authErrorMessages.user_not_found });
 
-  // get the time when the user changed their pass (if they did) and
-  // their verified status
+  // 6
   const { changedPasswordAt, verified } = userData;
 
-  // convert iat to millis
   const iatInMs = iat * 1000;
 
-  // check if they changed pass after token was emitted
   if (changedPasswordAt && changedPasswordAt > iatInMs)
     throw new GenericError({ message: authErrorMessages.pass_changed });
 
-  // check if user is verified
+  // 7
   if (!verified)
     throw new GenericError({ message: authErrorMessages.user_not_verified });
 
+  // 8
   req.user = { id: user.id, ...userData };
 };
 

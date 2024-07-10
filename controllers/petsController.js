@@ -28,7 +28,6 @@ import { getMultipleByCriteria } from "../utils/dbMethods.js";
 
 // function roles:
 //  - extract data
-//  - validate data
 //  - check if user has reached the max number
 //      of pets
 //  - create pet
@@ -44,68 +43,6 @@ const createPet = async function (req, res) {
     body,
     user: { id: userId },
   } = req;
-  const {
-    name,
-    age,
-    ageIn,
-    species,
-    breed,
-    gender,
-    monitoringDietBy,
-    dietGoal,
-  } = body;
-
-  // validate data
-  const validationErrors = validateData(
-    [
-      new FieldToValidate(!name, "name"),
-      new FieldToValidate(!age, "age"),
-      new FieldToValidate(!ageIn, "ageIn"),
-      new FieldToValidate(
-        ageIn &&
-          ageIn !== process.env.PET_FIELD_AGE_IN_MONTHS &&
-          ageIn !== process.env.PET_FIELD_AGE_IN_YEARS,
-        "ageIn_option"
-      ),
-      new FieldToValidate(!species, "species"),
-      new FieldToValidate(
-        species &&
-          species !== process.env.PET_FIELD_SPECIES_DOG &&
-          species !== process.env.PET_FIELD_SPECIES_CAT,
-        "species_option"
-      ),
-      new FieldToValidate(!breed, "breed"),
-      new FieldToValidate(!gender, "gender"),
-      new FieldToValidate(!monitoringDietBy, "monitoringDietBy"),
-      new FieldToValidate(
-        monitoringDietBy &&
-          monitoringDietBy !== process.env.PET_FIELD_DIET_BY_MEALS &&
-          monitoringDietBy !== process.env.PET_FIELD_DIET_BY_CALORIES,
-        "monitoringDietBy_option"
-      ),
-      new FieldToValidate(
-        dietGoal === null || dietGoal === undefined,
-        "dietGoal"
-      ),
-      new FieldToValidate(
-        dietGoal <= 0 &&
-          monitoringDietBy === process.env.PET_FIELD_DIET_BY_MEALS,
-        "dietGoal_minimum_meals"
-      ),
-      new FieldToValidate(
-        dietGoal <= 0 &&
-          monitoringDietBy === process.env.PET_FIELD_DIET_BY_CALORIES,
-        "dietGoal_minimum_calories"
-      ),
-    ],
-    petValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
 
   // check if user reached max pets
   const collectionRef = db.collection(process.env.DB_COLLECTION_PETS);
@@ -145,50 +82,6 @@ const createPet = async function (req, res) {
 const updatePet = async function (req, res) {
   // extract data
   const { body, petRef } = req;
-
-  const { age, ageIn, species, monitoringDietBy, dietGoal } = body;
-
-  // validation error
-  const validationErrors = validateData(
-    [
-      new FieldToValidate(age && age < 0, "age"),
-      new FieldToValidate(
-        ageIn &&
-          ageIn !== process.env.PET_FIELD_AGE_IN_MONTHS &&
-          ageIn !== process.env.PET_FIELD_AGE_IN_YEARS,
-        "ageIn_option"
-      ),
-      new FieldToValidate(
-        species &&
-          species !== process.env.PET_FIELD_SPECIES_DOG &&
-          species !== process.env.PET_FIELD_SPECIES_CAT,
-        "species_option"
-      ),
-      new FieldToValidate(
-        monitoringDietBy &&
-          monitoringDietBy !== process.env.PET_FIELD_DIET_BY_MEALS &&
-          monitoringDietBy !== process.env.PET_FIELD_DIET_BY_CALORIES,
-        "monitoringDietBy_option"
-      ),
-      new FieldToValidate(
-        dietGoal <= 0 &&
-          monitoringDietBy === process.env.PET_FIELD_DIET_BY_MEALS,
-        "dietGoal_minimum_meals"
-      ),
-      new FieldToValidate(
-        dietGoal <= 0 &&
-          monitoringDietBy === process.env.PET_FIELD_DIET_BY_CALORIES,
-        "dietGoal_minimum_calories"
-      ),
-    ],
-    petValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
 
   // update pet
   await petRef.update(keepAllowedFieldsOnObj(body, petAllowedFields));

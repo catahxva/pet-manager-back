@@ -56,7 +56,6 @@ const validateMealDataFactory = function (httpMethod) {
           )
         : new FieldToValidate(
             monitoringByCalories &&
-              foods !== null &&
               foods !== undefined &&
               (!Array.isArray(foods) || foods.length <= 0),
             "foods_right_format"
@@ -87,24 +86,29 @@ const validateMealDataPost = validateMealDataFactory("post");
 const validateMealDataPatch = validateMealDataFactory("patch");
 
 const checkMealExists = async function (req, _res) {
+  // extract id
   const {
     params: { id: mealId },
   } = req;
 
+  // query doc
   const {
     doc: mealDoc,
     docData: mealData,
     docRef: mealRef,
   } = await getOneById(db, process.env.DB_COLLECTION_MEALS, mealId);
 
+  // throw err if no doc
   if (!mealDoc)
     throw new GenericError({
       message: mealErrorMessages.meal_not_found,
       statusCode: 404,
     });
 
+  // build a meal obj
   const meal = { id: mealDoc.id, ...mealData };
 
+  // put data on req obj
   req.meal = meal;
   req.mealRef = mealRef;
 };

@@ -18,7 +18,7 @@ const appoinmentsRouter = function (fastify, _options, done) {
         petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         generalMiddleware.checkDateInfoAppointment,
-        appointmentsMiddleware.checkAppointmentExistsPost,
+        appointmentsMiddleware.checkForAppointmentInTimeFrame,
       ],
     },
     appointmentsController.createAppointment
@@ -31,6 +31,7 @@ const appoinmentsRouter = function (fastify, _options, done) {
         authMiddleware.protectRoute,
         petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
+        appointmentsMiddleware.checkAppointmentExists,
       ],
     },
     appointmentsController.updateAppointment

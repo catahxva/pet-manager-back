@@ -4,10 +4,9 @@ import validateData from "../utils/validateData.js";
 import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
 import FieldToValidate from "../utils/FieldToValidate.js";
 import isEmptyObject from "../utils/isEmptyObject.js";
-import { getOneByCriteria } from "../utils/dbMethods.js";
-import Criteria from "../utils/Criteria.js";
-import { ComplexError, GenericError } from "../utils/CustomErrors.js";
+import { ComplexError } from "../utils/CustomErrors.js";
 import { appointmentsValidationErrorMessages } from "../utils/messages/appointmentsMessages.js";
+import isNumber from "../utils/isNumber.js";
 
 // function roles:
 //  - extract data
@@ -31,16 +30,16 @@ const createAppointment = async function (req, res) {
     body;
 
   // validate data
-
   const validationErrors = validateData(
     [
-      new FieldToValidate(typeof startHour !== "number", "start_hour_invalid"),
-      new FieldToValidate(
-        typeof startMinute !== "number",
-        "start_minute_invalid"
-      ),
-      new FieldToValidate(typeof endHour !== "number", "end_hour_invalid"),
-      new FieldToValidate(typeof endMinute !== "number", "end_minute_invalid"),
+      new FieldToValidate(!startHour, "startHour"),
+      new FieldToValidate(!isNumber(startHour), "startHour_invalid"),
+      new FieldToValidate(!startMinute, "startMinute_invalid"),
+      new FieldToValidate(!isNumber(startMinute), "startMinute_invalid"),
+      new FieldToValidate(!endHour, "endHour"),
+      new FieldToValidate(!isNumber(endHour), "endHour_invalid"),
+      new FieldToValidate(!endMinute, "endMinute"),
+      new FieldToValidate(!isNumber(endMinute), "endMinute_invalid"),
       new FieldToValidate(!description, "description"),
       new FieldToValidate(!type, "type"),
       new FieldToValidate(
@@ -77,7 +76,48 @@ const createAppointment = async function (req, res) {
   });
 };
 
-const updateAppointment = async function (req, res) {};
+// function roles:
+//  - extract data
+//  - validate data
+const updateAppointment = async function (req, res) {
+  // extract data
+  const { apptRef, body } = req;
+  const { startHour, startMinute, endHour, endMinute, description, type } =
+    body;
+
+  // validate data
+  const validationErrors = validateData(
+    [
+      new FieldToValidate(
+        startHour !== undefined && !isNumber(startHour),
+        "startHour_invalid"
+      ),
+      new FieldToValidate(
+        startMinute !== undefined && !isNumber(startMinute),
+        "startMinute_invalid"
+      ),
+      new FieldToValidate(
+        endHour !== undefined && !isNumber(endHour),
+        "endHour_invalid"
+      ),
+      new FieldToValidate(
+        endMinute !== undefined && !isNumber(endMinute),
+        "endMinute_invalid"
+      ),
+    ],
+    appointmentsValidationErrorMessages
+  );
+
+  if (!isEmptyObject(validationErrors))
+    throw new ComplexError({
+      errorType: process.env.ERROR_TYPE_VALIDATION,
+      errorsObject: validationErrors,
+    });
+
+  //
+};
+
+const removeAppointment = async function (req, res) {};
 
 const appointmentsController = { createAppointment, updateAppointment };
 

@@ -1,28 +1,21 @@
 import db from "../db.js";
 import { GenericError } from "../utils/CustomErrors.js";
 import { getOneByCriteria, getOneById } from "../utils/dbMethods.js";
+import getApptTimeStamps from "../utils/getApptTimeStamps.js";
 import Criteria from "../utils/Criteria.js";
 
-const checkAppointmentExistsPost = async function (req, _res) {
+const checkForAppointmentInTimeFrame = async function (req, _res) {
   // extract data
   const { body } = req;
   const { day, month, year, startHour, startMinute, endHour, endMinute } = body;
 
-  const startTimeStamp = new Date(
-    year,
-    month - 1,
-    day,
-    startHour,
-    startMinute
-  ).getTime();
-  const endTimeStamp = new Date(
-    year,
-    month - 1,
-    day,
-    endHour,
-    endMinute
-  ).getTime();
+  // build start and end time stamps
+  const [startTimeStamp, endTimeStamp] = getApptTimeStamps(
+    [year, month - 1, day, startHour, startMinute],
+    [year, month - 1, day, endHour, endMinute]
+  );
 
+  // query for appointment based on time stamps
   const { empty: noAppointment } = await getOneByCriteria(
     db,
     process.env.DB_COLLECTION_APPOINTMENTS,
@@ -32,34 +25,40 @@ const checkAppointmentExistsPost = async function (req, _res) {
     ]
   );
 
+  // check if there is any appointment
   if (!noAppointment)
     throw new GenericError({
       message: "You already have an appoinment registered for this time frame",
     });
 
+  // set timestamps on req obj
   req.startTimeStamp = startTimeStamp;
   req.endTimeStamp = endTimeStamp;
 };
 
-const checkAppointmentExistsPatch = async function (req, _res) {
+const checkAppointmentExists = async function (req, _res) {
+  // extract id
   const {
     params: { id },
   } = req;
 
+  // get appt doc
   const { doc: apptDoc, docRef: apptRef } = await getOneById(
     db,
     process.env.DB_COLLECTION_APPOINTMENTS,
     id
   );
 
+  // check if it exists
   if (!apptDoc) throw new GenericError({ message: "", statusCode: 404 });
 
+  // put ref on req obj
   req.apptRef = apptRef;
 };
 
 const appointmentsMiddleware = {
-  checkAppointmentExistsPost,
-  checkAppointmentExistsPatch,
+  checkForAppointmentInTimeFrame,
+  checkAppointmentExists,
 };
 
 export default appointmentsMiddleware;

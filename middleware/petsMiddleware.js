@@ -3,7 +3,7 @@ import { GenericError } from "../utils/CustomErrors.js";
 import { getOneById } from "../utils/dbMethods.js";
 import { petErrorMessages } from "../utils/messages/petMessages.js";
 
-const extractPetIdBody = function (req, res) {
+const extractPetIdBody = function (req, _res, done) {
   const {
     body: { petId },
   } = req;
@@ -14,14 +14,18 @@ const extractPetIdBody = function (req, res) {
     });
 
   req.petId = petId;
+
+  done();
 };
 
-const extractPetIdParams = function (req, _res) {
+const extractPetIdParams = function (req, _res, done) {
   const {
     params: { id: petId },
   } = req;
 
   req.petId = petId;
+
+  done();
 };
 
 const checkPetExists = async function (req, _res) {

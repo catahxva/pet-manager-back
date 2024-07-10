@@ -1,9 +1,7 @@
 // imports:
 import bcrypt from "bcrypt";
 import db from "../db.js";
-import validateData from "../utils/validateData.js";
 import checkDataUniqueness from "../utils/checkDataUniqueness.js";
-import FieldToValidate from "../utils/FieldToValidate.js";
 import FieldToCheckUniqueness from "../utils/FieldToCheckUniqueness.js";
 import isEmptyObject from "../utils/isEmptyObject.js";
 import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
@@ -11,7 +9,6 @@ import authAllowedFields from "../utils/allowedFields/authAllowedFields.js";
 import sendEmail from "../utils/sendEmail.js";
 import createJWTToken from "../utils/createJWTToken.js";
 import {
-  authValidationErrorMessages,
   authUniquenessErrorMessages,
   authErrorMessages,
   authSuccessMessages,
@@ -19,56 +16,19 @@ import {
 import { ComplexError, GenericError } from "../utils/CustomErrors.js";
 import createCrypto32Token from "../utils/createCrypto32Token.js";
 
-// CONTROLLER FOR:
-//              - SIGNUP
-//              - RESENDING VERIFICATION LINK
-//              - VERIFYING ACCOUNT
-//              - LOGGING IN
-//              - LOGGING OUT
-//              - FORGOT PASS FN
-//              - RESET PASS
-
 // function roles:
-//  - extract necessary data from request body
-//  - validate data based on criteria
-//  - create user account
-//  - set a verification token on the user account
-//      which is to be used later
-//  - send email to the provided email address with
-//      the verification token so the user can
-//      verify their account
+//  - extract data (1)
+//  - create user (2)
+//  - send email (3)
+//  - send response back to client (4)
 
-// throws error if:
-//  - expected data is not provided
-//  - data cannot be validated
-//  - data is not unique
-//  - user doc creation fails
-//  - email sending fails
-//  - unexpected error
+// throws err if:
+//  - unexpected err
 
 const signup = async function (req, res) {
-  // data extraction
+  // 1
   const body = req.body;
   const { username, email, password } = body;
-
-  // validation error
-  const validationErrors = validateData(
-    [
-      new FieldToValidate(!username, "username"),
-      new FieldToValidate(!email, "email"),
-      new FieldToValidate(!password, "password"),
-      new FieldToValidate(username && username.length < 6, "username_length"),
-      new FieldToValidate(email && !email.includes("@"), "email_valid"),
-      new FieldToValidate(password && password.length < 8, "password_length"),
-    ],
-    authValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
 
   // uniqueness error
   const uniquenessErrors = await checkDataUniqueness(
@@ -87,23 +47,14 @@ const signup = async function (req, res) {
       errorsObject: uniquenessErrors,
     });
 
-  // create token && create user && send email
+  // 2 && 3
   await db.runTransaction(async (transaction) => {
-    // create token
     const [verifyEmailToken, verifyEmailTokenExpirationTime] =
       createCrypto32Token(process.env.VERIFY_ACCOUNT_TOKEN_EXPIRATION_TIME);
 
-    // set verified status as false
-    const verified = false;
+    const hashedPassword = await bcrypt.hash(password, 12);
 
-    // hash password
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // set created at
-    const createdAt = Date.now();
-
-    // create user
+    // 2
     const collectionRef = db.collection(process.env.DB_COLLECTION_USERS);
     const newUserRef = collectionRef.doc();
 
@@ -112,8 +63,8 @@ const signup = async function (req, res) {
       password: hashedPassword,
       verifyEmailToken,
       verifyEmailTokenExpirationTime,
-      verified,
-      createdAt,
+      verified: false,
+      createdAt: Date.now(),
     };
 
     transaction.set(
@@ -121,7 +72,7 @@ const signup = async function (req, res) {
       keepAllowedFieldsOnObj(userData, authAllowedFields)
     );
 
-    // send email
+    // 3
     await sendEmail({
       to: email,
       subject: "Verify account",
@@ -129,7 +80,7 @@ const signup = async function (req, res) {
     });
   });
 
-  // send response
+  // 4
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: authSuccessMessages.signup(email),
@@ -137,48 +88,30 @@ const signup = async function (req, res) {
 };
 
 // function roles:
-//  - extract data
-//  - validate data
-//  - update email token
-//  - send new email
-//  - send new res
+//  - extract data (1)
+//  - update user with new token (2)
+//  - send email (3)
+//  - send res back to client (4)
 
 // throws error if:
-//  - invalid user input
 //  - unexpected error
 
 const resendVerification = async function (req, res) {
-  // extract data
-  const {
-    userData,
-    userRef,
-    body: { username, email },
-  } = req;
+  // 1
+  const { userData, userRef } = req;
 
-  const validationErrors = validateData(
-    [new FieldToValidate(!username && !email, "credential")],
-    authValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
-
-  // update user with a new verification token && send email
+  // 2 && 3
   await db.runTransaction(async (transaction) => {
-    // create token
+    // 2
     const [verifyEmailToken, verifyEmailTokenExpirationTime] =
       createCrypto32Token(process.env.VERIFY_ACCOUNT_TOKEN_EXPIRATION_TIME);
 
-    // update user
     transaction.update(userRef, {
       verifyEmailToken,
       verifyEmailTokenExpirationTime,
     });
 
-    // send email
+    // 3
     await sendEmail({
       to: userData.email,
       subject: "Verify Account",
@@ -186,7 +119,7 @@ const resendVerification = async function (req, res) {
     });
   });
 
-  // send response
+  // 4
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: authSuccessMessages.resend(userData.email),
@@ -194,28 +127,29 @@ const resendVerification = async function (req, res) {
 };
 
 // function roles:
-//  - extract data
-//  - update user doc
-//  - create jwt token
-//  - send res
+//  - extract data (1)
+//  - update user doc (2)
+//  - create jwt token (3)
+//  - send res (4)
 
 // throws error if:
 //  - unexpected error
 
 const verifyAccount = async function (req, res) {
+  // 1
   const { userDoc, userRef } = req;
 
-  // update verification status and remove current token
+  // 2
   await userRef.update({
     verified: true,
     verifyEmailToken: null,
     verifyEmailTokenExpirationTime: null,
   });
 
-  // create new jwt token
+  // 3
   const jwt = createJWTToken({ id: userDoc.id });
 
-  // send token to client
+  // 4
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: authSuccessMessages.verify,
@@ -224,50 +158,33 @@ const verifyAccount = async function (req, res) {
 };
 
 // function roles:
-//  - extract data
-//  - validate data
-//  - compare passwords
-//  - create jwt token
-//  - send res
+//  - extract data (1)
+//  - check if pass matches (2)
+//  - create jwt token (3)
+//  - send res to client (4)
 
 // throws error if:
 //  - passwords dont match
 //  - unexpected error
 
 const login = async function (req, res) {
-  // extract data
+  // 1
   const {
     userDoc,
     userData,
-    body: { username, email, password },
+    body: { password },
   } = req;
 
-  // validation error
-  const validationErrors = validateData(
-    [
-      new FieldToValidate(!username && !email, "credential"),
-      new FieldToValidate(!password, "password"),
-    ],
-    authValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
-
-  // compare passwords
+  // 2
   const passwordsMatch = await bcrypt.compare(password, userData.password);
 
-  // check if passwords match
   if (!passwordsMatch)
     throw new GenericError({ message: authErrorMessages.pass_dont_match });
 
-  // create jwt
+  // 3
   const jwt = createJWTToken({ id: userDoc.id });
 
-  // send response
+  // 4
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: authSuccessMessages.login,
@@ -276,17 +193,18 @@ const login = async function (req, res) {
 };
 
 // function roles
-//  - extract token
-//  - blacklist the given token
+//  - extract token (1)
+//  - blacklist the given token (2)
+//  - send back res (3)
 
 // throws error if:
 //  - unexpected error
 
 const logout = async function (req, res) {
-  // extract token
+  //1
   const { token } = req;
 
-  // blacklist token
+  // 2
   const collectionRef = db.collection(
     process.env.DB_COLLECTION_BLACKLISTED_TOKENS
   );
@@ -294,7 +212,7 @@ const logout = async function (req, res) {
 
   await newBlacklistedTokenRef.set({ token });
 
-  // send response
+  // 3
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: authSuccessMessages.logout,
@@ -302,51 +220,30 @@ const logout = async function (req, res) {
 };
 
 // function roles
-//  - extract data
-//  - validate data
-//  - create token
-//  - update user
-//  - send email
-//  - send response
+//  - extract data (1)
+//  - update user with token (2)
+//  - send email (3)
+//  - send response (4)
 
 // throws error if:
-//  - invalid user input
-//  - unexpected errof
+//  - unexpected error
 
 const forgotPass = async function (req, res) {
-  // extract data
-  const {
-    userData,
-    userRef,
-    body: { username, email },
-  } = req;
+  // 1
+  const { userData, userRef } = req;
 
-  // validate data
-  // validation error
-  const validationErrors = validateData(
-    [new FieldToValidate(!username && !email, "credential")],
-    authValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
-
-  // create token && update user && send email
+  // 2 && 3
   await db.runTransaction(async (transaction) => {
-    // create token
+    // 2
     const [changePasswordToken, changePasswordTokenExpirationTime] =
       createCrypto32Token(process.env.CHANGE_PASS_TOKEN_EXPIRATION_TIME);
 
-    // update user
     transaction.update(userRef, {
       changePasswordToken,
       changePasswordTokenExpirationTime,
     });
 
-    // send email
+    // 3
     await sendEmail({
       to: userData.email,
       subject: "Forgot Pass",
@@ -354,7 +251,7 @@ const forgotPass = async function (req, res) {
     });
   });
 
-  // send response
+  // 4
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: authSuccessMessages.forgot_pass(userData.email),
@@ -362,53 +259,35 @@ const forgotPass = async function (req, res) {
 };
 
 // function roles:
-//  - extract data
-//  - validate data
-//  - update the password
+//  - extract data (1)
+//  - update user with new pass (2)
+//  - send back res (3)
 
 // throws error if:
-//  - invalid user input
 //  - unexpected error
 
 const resetPass = async function (req, res) {
-  // extract data
+  // 1
   const {
     userRef,
     body: { password },
   } = req;
 
-  // validation error
-  const validationErrors = validateData(
-    [new FieldToValidate(password.length < 8, "password_length")],
-    authValidationErrorMessages
-  );
-
-  if (!isEmptyObject(validationErrors))
-    throw new ComplexError({
-      errorType: process.env.ERROR_TYPE_VALIDATION,
-      errorsObject: validationErrors,
-    });
-
-  // update pass
-
-  // hash pass
+  // 2
   const saltRounds = 12;
   const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  // register the current time
   const changedPasswordAt = Date.now();
 
   await userRef.update({ password: hashedPassword, changedPasswordAt });
 
-  // send response
+  // 3
   res.code(200).send({
     status: process.env.RES_STATUS_SUCCESS,
     message: authSuccessMessages.reset_pass,
   });
 };
 
-// auth controller is a simple object literal which will contain
-// all the auth related controllers
 const authController = {
   signup,
   verifyAccount,
