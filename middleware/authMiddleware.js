@@ -99,53 +99,79 @@ const protectRoute = async function (req, res) {
   req.user = { id: user.id, ...userData };
 };
 
+// function roles:
+//  - extract data (1)
+//  - set criteria for use in later middleware (2)
+//  - put said criteria on req obj (3)
+//  - go forward with req (4)
+
+// throws err if:
+//  - unexpected error
+
 const setReceivedCredentialCriteria = function (req, _res, done) {
-  // extract data
+  // 1
   const {
     body: { username, email },
   } = req;
 
-  // set up field and value for criteria
+  // 2
   const receivedCredential = username || email;
   const fieldToQueryBy = username ? "username" : "email";
 
-  // build criteria arr
   const criteriaArr = [new Criteria(fieldToQueryBy, "==", receivedCredential)];
 
-  // set criteria on res
+  // 3
   req.criteria = criteriaArr;
 
+  // 4
   done();
 };
 
-// factory function to create two diff functions which are very
-// similar to each other
+// function roles:
+//  - return another function in order to create other
+//    functions
+
+// returned function roles:
+//  - extract token (1)
+//  - set criteria arr for other use (2)
+//  - put criteria arr on req obj (3)
+//  - go forward with req (4)
+
+// throws err if:
+//  - unexpected ett
 const setTokenCriteriaFactory = function (fieldName) {
-  // returns the final funciton
+  // returned fn
   return function (req, _res, done) {
-    // extracts toekn
+    // 1
     const { token } = req;
 
-    // creates criteria arrray
+    // 2
     const criteriaArr = [new Criteria(fieldName, "==", token)];
 
-    // sets criteria arr on req obj
+    // 3
     req.criteria = criteriaArr;
 
+    // 4
     done();
   };
 };
 
-// create fns based on factory fn
+// 2 fns based on a facotry fn
 const setVerifyAccountCriteria = setTokenCriteriaFactory("verifyEmailToken");
 const setResetPassCriteria = setTokenCriteriaFactory("changePasswordToken");
 
-// queries user doc based on criteria from prev middleware
+// function roles:
+//  - extract criteria (1)
+//  - get user based on received criteria (2)
+//  - put necessary data on req obj (3)
+
+// throws err if:
+//  - unexpected err
 const getUserDocByCriteria = async function (req, _res) {
-  // extract criteria
+  // 1
   const { criteria } = req;
 
-  // get user doc
+  // 2
   const {
     empty: noUser,
     doc: userDoc,
@@ -153,53 +179,77 @@ const getUserDocByCriteria = async function (req, _res) {
     docRef: userRef,
   } = await getOneByCriteria(db, process.env.DB_COLLECTION_USERS, criteria);
 
-  // put necessary info on req obj
+  // 3
   req.noUser = noUser;
   req.userDoc = userDoc;
   req.userData = userData;
   req.userRef = userRef;
 };
 
-// checks if the user does exist
+// function roles:
+//  - extract data (1)
+//  - check if user exists (2)
+//  - go forward with request (3)
+
+// throws err if:
+//  - no user found
+//  - unexpected err
 const checkUserExists = function (req, _res, done) {
-  // extract data from req
+  // 1
   const { noUser } = req;
 
-  // throw err if no user
+  // 2
   if (noUser)
     throw new GenericError({
       message: authErrorMessages.user_not_found,
       statusCode: 404,
     });
 
+  // 3
   done();
 };
 
-// checks if the user is already verified (useful for actions like
-// resending a verification token)
+// function roles:
+//  - extract data (1)
+//  - check if user is verified (2)
+//  - forward request (3)
+
+// throws err if:
+//  - user is already verified
+//  - unexpected err
+
 const checkIfUserAlreadyVerified = function (req, _res, done) {
-  // extract data
+  // 1
   const { userData } = req;
 
-  // do check
+  // 2
   if (userData.verified)
     throw new GenericError({
       message: authErrorMessages.user_already_verified,
     });
 
+  // 3
   done();
 };
 
-// check if user is not verified yet (useful for actions like login,
-// forgot pass, etc)
+// function roles:
+//  - extract data (1)
+//  - check if user is verified (2)
+//  - forward request (3)
+
+// throws error if:
+//  - user is not verified
+//  - unexpected err
+
 const checkIfUserNotVerified = function (req, _res, done) {
-  // extract data
+  // 1
   const { userData } = req;
 
-  // do check
+  // 2
   if (!userData.verified)
     throw new GenericError({ message: authErrorMessages.user_not_verified });
 
+  // 3
   done();
 };
 

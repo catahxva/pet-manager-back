@@ -43,16 +43,17 @@ const checkAppointmentExists = async function (req, _res) {
   } = req;
 
   // get appt doc
-  const { doc: apptDoc, docRef: apptRef } = await getOneById(
-    db,
-    process.env.DB_COLLECTION_APPOINTMENTS,
-    id
-  );
+  const {
+    doc: apptDoc,
+    docData: apptData,
+    docRef: apptRef,
+  } = await getOneById(db, process.env.DB_COLLECTION_APPOINTMENTS, id);
 
   // check if it exists
   if (!apptDoc) throw new GenericError({ message: "", statusCode: 404 });
 
   // put ref on req obj
+  req.apptData = apptData;
   req.apptRef = apptRef;
 };
 

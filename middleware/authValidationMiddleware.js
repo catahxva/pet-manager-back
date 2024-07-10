@@ -1,6 +1,9 @@
+// imports
 import validateData from "../utils/validateData.js";
 import FieldToValidate from "../utils/FieldToValidate.js";
 import { authValidationErrorMessages } from "../utils/messages/authMessages.js";
+
+// Middlewares for validating user input for multiple auth functions
 
 const validateSignupInput = function (req, _res, done) {
   const { username, email, password } = body;

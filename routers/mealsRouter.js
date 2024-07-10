@@ -3,8 +3,16 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import petsMiddleware from "../middleware/petsMiddleware.js";
 import daysMiddleware from "../middleware/daysMiddleware.js";
 import mealsMiddleware from "../middleware/mealsMiddleware.js";
+import mealsValidationMiddleware from "../middleware/mealsValidationMiddleware.js";
+import generalMiddleware from "../middleware/generalMiddleware.js";
+
+// router for:
+//  - creating a meal
+//  - updating meal
+//  - removing meal
 
 const mealsRouter = function (fastify, _options, done) {
+  // decorators:
   fastify.decorate("token", "");
   fastify.decorate("user", "");
   fastify.decorate("pet", "");
@@ -12,9 +20,11 @@ const mealsRouter = function (fastify, _options, done) {
   fastify.decorate("dayRef", "");
   fastify.decorate("monitoringByMeals", "");
   fastify.decorate("monitoringByCalories", "");
+  fastify.decorate("validationErrors", "");
   fastify.decorate("meal", "");
   fastify.decorate("mealRef", "");
 
+  // routes:
   fastify.post(
     "/",
     {
@@ -25,7 +35,8 @@ const mealsRouter = function (fastify, _options, done) {
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
         mealsMiddleware.documentsCorrespond,
-        mealsMiddleware.validateMealDataPost,
+        mealsValidationMiddleware.validateMealPost,
+        generalMiddleware.checkValidationErrors,
       ],
     },
     mealsController.createMeal
@@ -40,7 +51,8 @@ const mealsRouter = function (fastify, _options, done) {
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
         mealsMiddleware.documentsCorrespond,
-        mealsMiddleware.validateMealDataPatch,
+        mealsValidationMiddleware.validateMealPatch,
+        generalMiddleware.checkValidationErrors,
         mealsMiddleware.checkMealExists,
       ],
     },
@@ -62,6 +74,7 @@ const mealsRouter = function (fastify, _options, done) {
     mealsController.removeMeal
   );
 
+  // done functoin call:
   done();
 };
 

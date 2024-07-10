@@ -1,12 +1,6 @@
 import db from "../db.js";
-import isEmptyObject from "../utils/isEmptyObject.js";
-import validateData from "../utils/validateData.js";
-import {
-  mealValidationErrorMessages,
-  mealErrorMessages,
-} from "../utils/messages/mealMessages.js";
-import { GenericError, ComplexError } from "../utils/CustomErrors.js";
-import FieldToValidate from "../utils/FieldToValidate.js";
+import { mealErrorMessages } from "../utils/messages/mealMessages.js";
+import { GenericError } from "../utils/CustomErrors.js";
 import { getOneById } from "../utils/dbMethods.js";
 import { generalErrorMessages } from "../utils/messages/generalMessages.js";
 
@@ -34,89 +28,45 @@ const documentsCorrespond = function (req, _res, done) {
   done();
 };
 
-// factory function for creating two diff middlewares for 2 diff
-// controllers (createMeal && update meal)
-const validateMealDataFactory = function (httpMethod) {
-  // return final fn
-  return function (req, _res, done) {
-    // extract data
-    const {
-      monitoringByMeals,
-      monitoringByCalories,
-      body: { description, foods },
-    } = req;
+// function roles:
+//  - extract data (1)
+//  - query data (2)
+//  - check if doc exists (3)
+//  - put data on req obj (4)
 
-    // create a dynamic validation obj based on received method
-    const dynamicFieldToValidate =
-      httpMethod === "post"
-        ? new FieldToValidate(
-            monitoringByCalories &&
-              (!foods || !Array.isArray(foods) || foods.length <= 0),
-            "foods_required"
-          )
-        : new FieldToValidate(
-            monitoringByCalories &&
-              foods !== undefined &&
-              (!Array.isArray(foods) || foods.length <= 0),
-            "foods_right_format"
-          );
-
-    //validate data
-    const validationErrors = validateData(
-      [
-        new FieldToValidate(monitoringByMeals && !description, "description"),
-        new FieldToValidate(monitoringByMeals && foods, "foods_not_allowed"),
-        dynamicFieldToValidate,
-      ],
-      mealValidationErrorMessages
-    );
-
-    if (!isEmptyObject(validationErrors))
-      throw new ComplexError({
-        errorType: process.env.ERROR_TYPE_VALIDATION,
-        errorsObject: validationErrors,
-      });
-
-    done();
-  };
-};
-
-// 2 fns based on factory fn
-const validateMealDataPost = validateMealDataFactory("post");
-const validateMealDataPatch = validateMealDataFactory("patch");
+// throws err if:
+//  - no doc
+//  - unexpected err
 
 const checkMealExists = async function (req, _res) {
-  // extract id
+  // 1
   const {
     params: { id: mealId },
   } = req;
 
-  // query doc
+  // 2
   const {
     doc: mealDoc,
     docData: mealData,
     docRef: mealRef,
   } = await getOneById(db, process.env.DB_COLLECTION_MEALS, mealId);
 
-  // throw err if no doc
+  // 3
   if (!mealDoc)
     throw new GenericError({
       message: mealErrorMessages.meal_not_found,
       statusCode: 404,
     });
 
-  // build a meal obj
+  // 4
   const meal = { id: mealDoc.id, ...mealData };
 
-  // put data on req obj
   req.meal = meal;
   req.mealRef = mealRef;
 };
 
 const mealsMiddleware = {
   documentsCorrespond,
-  validateMealDataPost,
-  validateMealDataPatch,
   checkMealExists,
 };
 

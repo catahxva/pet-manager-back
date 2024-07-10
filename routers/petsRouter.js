@@ -4,16 +4,20 @@ import petsMiddleware from "../middleware/petsMiddleware.js";
 import petsValidationMiddleware from "../middleware/petsValidationMiddleware.js";
 import generalMiddleware from "../middleware/generalMiddleware.js";
 
-// router for creating a pet, updating, removing a pet
+// router for:
+//  - create pet
+//  - update pet
+//  - remove pet
 
+// router:
 const petsRouter = function (fastify, _options, done) {
-  // decorate req obj to allow user property
+  // decorators:
   fastify.decorate("token", "");
   fastify.decorate("validationErrors", "");
   fastify.decorate("user", "");
   fastify.decorate("petRef", "");
 
-  // routing
+  // routes:
   fastify.post(
     "/",
     {
@@ -53,7 +57,7 @@ const petsRouter = function (fastify, _options, done) {
     petsController.removePet
   );
 
-  // done function
+  // done function call
   done();
 };
 
