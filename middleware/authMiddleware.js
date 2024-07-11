@@ -37,6 +37,8 @@ const getTokenFromHeaders = function (req, _res, done) {
 //  - put data on req obj (2)
 const decodeAuthToken = async function (req, _res) {
   // 1
+
+  const { token } = req;
   const { id, iat, exp } = await decodeJWTToken(token);
 
   // 2

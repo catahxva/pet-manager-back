@@ -49,6 +49,9 @@ const createDay = async function (req, res) {
       getOneByCriteria(db, process.env.DB_COLLECTION_YEARS, commonCriteria),
     ]);
 
+  console.log(noMonth);
+  console.log(noYear);
+
   if (!noDay) throw new GenericError({ message: dayErrorMessages.day_exists });
 
   // 3

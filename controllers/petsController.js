@@ -86,7 +86,10 @@ const updatePet = async function (req, res) {
 
 const removePet = async function (req, res) {
   // 1
-  const { petRef } = req;
+  const {
+    petRef,
+    pet: { id: petId },
+  } = req;
 
   const criteriaArr = [new Criteria("petId", "==", petId)];
 
@@ -95,14 +98,28 @@ const removePet = async function (req, res) {
     { docsRefs: monthRefs },
     { docsRefs: yearRefs },
     { docsRefs: mealRefs },
+    { docsRefs: appointmentsRefs },
   ] = await Promise.all([
     getMultipleByCriteria(db, process.env.DB_COLLECTION_DAYS, criteriaArr),
     getMultipleByCriteria(db, process.env.DB_COLLECTION_MONTHS, criteriaArr),
     getMultipleByCriteria(db, process.env.DB_COLLECTION_YEARS, criteriaArr),
     getMultipleByCriteria(db, process.env.DB_COLLECTION_MEALS, criteriaArr),
+    getMultipleByCriteria(
+      db,
+      process.env.DB_COLLECTION_APPOINTMENTS,
+      criteriaArr
+    ),
   ]);
 
-  const allDocRefs = [...dayRefs, ...monthRefs, ...yearRefs, ...mealRefs];
+  console.log(dayRefs);
+
+  const allDocRefs = [
+    ...dayRefs,
+    ...monthRefs,
+    ...yearRefs,
+    ...mealRefs,
+    ...appointmentsRefs,
+  ];
 
   // 2 && 3
   await db.runTransaction(async (transaction) => {

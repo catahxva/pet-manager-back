@@ -66,6 +66,7 @@ const validateCreatePet = function (req, _res, done) {
 };
 
 const validateUpdatePet = function (req, _res, done) {
+  const { body } = req;
   const { age, ageIn, species, monitoringDietBy, dietGoal } = body;
 
   const validationErrors = validateData(

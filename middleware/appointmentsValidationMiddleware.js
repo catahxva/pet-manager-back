@@ -4,18 +4,19 @@ import { appointmentsValidationErrorMessages } from "../utils/messages/appointme
 import isNumber from "../utils/isNumber.js";
 
 const validateCreateAppointment = function (req, res, done) {
+  const { body } = req;
   const { startHour, startMinute, endHour, endMinute, description, type } =
     body;
 
   const validationErrors = validateData(
     [
-      new FieldToValidate(!startHour, "startHour"),
+      new FieldToValidate(startHour === undefined, "startHour"),
       new FieldToValidate(!isNumber(startHour), "startHour_invalid"),
-      new FieldToValidate(!startMinute, "startMinute_invalid"),
+      new FieldToValidate(startMinute === undefined, "startMinute"),
       new FieldToValidate(!isNumber(startMinute), "startMinute_invalid"),
-      new FieldToValidate(!endHour, "endHour"),
+      new FieldToValidate(endHour === undefined, "endHour"),
       new FieldToValidate(!isNumber(endHour), "endHour_invalid"),
-      new FieldToValidate(!endMinute, "endMinute"),
+      new FieldToValidate(endMinute === undefined, "endMinute"),
       new FieldToValidate(!isNumber(endMinute), "endMinute_invalid"),
       new FieldToValidate(!description, "description"),
       new FieldToValidate(!type, "type"),
@@ -35,6 +36,7 @@ const validateCreateAppointment = function (req, res, done) {
 };
 
 const validateUpdateAppointment = function (req, _res, done) {
+  const { body } = req;
   const { startHour, startMinute, endHour, endMinute } = body;
 
   const validationErrors = validateData(

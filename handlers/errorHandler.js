@@ -11,7 +11,7 @@ const errorHandler = function (error, _req, res) {
         message: "Something went wrong. Please try again later!",
       }).errorWithoutStackTrace();
 
-  res.code(statusCode).send(errorObj);
+  return res.code(statusCode).send(errorObj);
 };
 
 export default errorHandler;

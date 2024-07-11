@@ -1,8 +1,8 @@
 import db from "../db.js";
 import { getOneByCriteria } from "../utils/dbMethods.js";
-import Criteria from "../utils/Criteria";
-import { GenericError } from "../utils/CustomErrors";
-import { authErrorMessages } from "../utils/messages/authMessages";
+import Criteria from "../utils/Criteria.js";
+import { GenericError } from "../utils/CustomErrors.js";
+import { authErrorMessages } from "../utils/messages/authMessages.js";
 
 const checkForBlacklistedToken = async function (req, res) {
   const { token } = req;

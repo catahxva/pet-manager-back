@@ -1,4 +1,4 @@
-import { GenericError } from "../utils/CustomErrors.js";
+import { GenericError, ComplexError } from "../utils/CustomErrors.js";
 import { appointmentsErrorMessages } from "../utils/messages/appointmentsMessages.js";
 import { dayErrorMessages } from "../utils/messages/dayMessages.js";
 import isPositiveNumber from "../utils/isPositiveNumber.js";

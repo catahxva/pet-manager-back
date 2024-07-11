@@ -48,7 +48,7 @@ export const getMultipleByCriteria = async function (
   const { empty, docs } = await collectionQuery.get();
 
   // guard clause if query is empty
-  if (empty) return { empty, docs: null, docsData: null, docsRefs: null };
+  if (empty) return { empty, docs: [], docsData: [], docsRefs: [] };
 
   // extract docs data and docs refs
   const docsData = [];

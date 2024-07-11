@@ -10,6 +10,10 @@
 // throws err if:
 //  - unexpected err
 
+import validateData from "../utils/validateData.js";
+import FieldToValidate from "../utils/FieldToValidate.js";
+import { mealValidationErrorMessages } from "../utils/messages/mealMessages.js";
+
 const validateMealDataFactory = function (httpMethod) {
   // return child fn
   return function (req, _res, done) {

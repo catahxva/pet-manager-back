@@ -6,6 +6,7 @@ import { authValidationErrorMessages } from "../utils/messages/authMessages.js";
 // Middlewares for validating user input for multiple auth functions
 
 const validateSignupInput = function (req, _res, done) {
+  const { body } = req;
   const { username, email, password } = body;
 
   const validationErrors = validateData(

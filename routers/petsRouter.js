@@ -14,7 +14,6 @@ import blacklistedTokenMiddleware from "../middleware/blacklistedTokenMiddleware
 const petsRouter = function (fastify, _options, done) {
   // decorators:
   fastify.decorate("token", "");
-  fastify.decorate("token", "");
   fastify.decorate("jwtId", "");
   fastify.decorate("jwtIat", "");
   fastify.decorate("jwtExp", "");
