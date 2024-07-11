@@ -111,8 +111,6 @@ const removePet = async function (req, res) {
     ),
   ]);
 
-  console.log(dayRefs);
-
   const allDocRefs = [
     ...dayRefs,
     ...monthRefs,
