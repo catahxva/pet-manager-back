@@ -11,6 +11,7 @@ const petAllowedFields = [
   "dietPreferences",
   "monitoringDietBy",
   "dietGoal",
+  "createdAt",
 ];
 
 export default petAllowedFields;

@@ -43,7 +43,10 @@ const createPet = async function (req, res) {
   const newPetRef = collectionRef.doc();
 
   await newPetRef.set(
-    keepAllowedFieldsOnObj({ ...body, userId }, petAllowedFields)
+    keepAllowedFieldsOnObj(
+      { ...body, userId, createdAt: Date.now() },
+      petAllowedFields
+    )
   );
 
   // 4

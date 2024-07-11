@@ -2,6 +2,7 @@ import db from "../db.js";
 import keepAllowedFieldsOnObj from "../utils/keepAllowedFieldsOnObj.js";
 import mealAllowedFields from "../utils/allowedFields/mealAllowedFields.js";
 import { mealSuccessMessages } from "../utils/messages/mealMessages.js";
+import foodsAllowedFields from "../utils/allowedFields/foodsAllowedFields.js";
 
 // function roles:
 //  - extract data (1)
@@ -24,13 +25,20 @@ const createMeal = async function (req, res) {
   } = req;
   const { foods } = body;
 
-  // foods = [{quantity, baseCalories, foodId}]
+  // foods = [{quantity, baseCalories, name, foodId}]
+
+  const formattedFoods = foods.map((f) =>
+    keepAllowedFieldsOnObj(f, foodsAllowedFields)
+  );
 
   // 2 && 3
   await db.runTransaction(async (transaction) => {
     // 2
     const caloriesTotal = monitoringByCalories
-      ? foods.reduce((acc, f) => acc + (f.quantity / 100) * f.baseCalories, 0)
+      ? formattedFoods.reduce(
+          (acc, f) => acc + (f.quantity / 100) * f.baseCalories,
+          0
+        )
       : null;
 
     const collectionRef = db.collection(process.env.DB_COLLECTION_MEALS);
@@ -39,7 +47,7 @@ const createMeal = async function (req, res) {
     transaction.set(
       newMealRef,
       keepAllowedFieldsOnObj(
-        { userId, caloriesTotal, ...body },
+        { userId, caloriesTotal, ...body, foods: formattedFoods },
         mealAllowedFields
       )
     );
@@ -82,19 +90,32 @@ const updateMeal = async function (req, res) {
   } = req;
   const { foods } = body;
 
+  const formattedFoods = foods.map((f) =>
+    keepAllowedFieldsOnObj(f, foodsAllowedFields)
+  );
+
   // 2 && 3
   await db.runTransaction(async (transaction) => {
     // 2
-    const foodsValid = foods && Array.isArray(foods) && foods.length <= 0;
+    const foodsValid =
+      formattedFoods &&
+      Array.isArray(formattedFoods) &&
+      formattedFoods.length <= 0;
 
     const caloriesTotal =
       monitoringByCalories && foodsValid
-        ? foods.reduce((acc, f) => acc + (f.quantity / 100) * f.baseCalories, 0)
+        ? formattedFoods.reduce(
+            (acc, f) => acc + (f.quantity / 100) * f.baseCalories,
+            0
+          )
         : caloriesTotalOfMeal;
 
     transaction.update(
       mealRef,
-      keepAllowedFieldsOnObj({ caloriesTotal, ...body }, mealAllowedFields)
+      keepAllowedFieldsOnObj(
+        { caloriesTotal, ...body, foods: formattedFoods },
+        mealAllowedFields
+      )
     );
 
     // 3

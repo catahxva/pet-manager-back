@@ -13,6 +13,7 @@ const validateCreatePet = function (req, _res, done) {
     gender,
     monitoringDietBy,
     dietGoal,
+    bgColor,
   } = body;
 
   const validationErrors = validateData(
@@ -56,6 +57,7 @@ const validateCreatePet = function (req, _res, done) {
           monitoringDietBy === process.env.PET_FIELD_DIET_BY_CALORIES,
         "dietGoal_minimum_calories"
       ),
+      new FieldToValidate(!bgColor, "bgColor"),
     ],
     petValidationErrorMessages
   );

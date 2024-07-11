@@ -46,7 +46,6 @@ const mealsRouter = function (fastify, _options, done) {
         petsMiddleware.extractPetIdBody,
         petsMiddleware.checkPetExists,
         daysMiddleware.checkDayExists,
-        mealsMiddleware.documentsCorrespond,
         mealsValidationMiddleware.validateMealPost,
         generalMiddleware.checkValidationErrors,
       ],
